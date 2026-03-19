@@ -328,3 +328,82 @@ body {
 .toast-success {
   border-left-color: var(--productive);
 }
+
+/* Divider */
+.divider {
+  text-align: center;
+  margin: 20px 0;
+  position: relative;
+}
+
+.divider::before {
+  content: "";
+  position: absolute;
+  top: 50%;
+  left: 0;
+  right: 0;
+  border-top: 1px solid var(--border);
+}
+
+.divider span {
+  background: var(--card);
+  padding: 0 12px;
+  position: relative;
+  color: var(--text-muted);
+  font-size: 0.85rem;
+}
+
+/* Drop Zone */
+.drop-zone {
+  border: 2px dashed var(--border);
+  border-radius: var(--radius);
+  padding: 32px;
+  text-align: center;
+  color: var(--text-muted);
+  transition:
+    border-color 0.2s,
+    background 0.2s;
+  cursor: pointer;
+}
+
+.drop-zone.drag-over {
+  border-color: var(--primary);
+  background: rgba(37, 99, 235, 0.05);
+}
+
+.drop-hint {
+  margin-top: 8px;
+  font-size: 0.85rem;
+}
+
+.file-label {
+  color: var(--primary);
+  cursor: pointer;
+  font-weight: 500;
+}
+
+.file-label:hover {
+  text-decoration: underline;
+}
+
+.file-info {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 12px;
+  font-weight: 500;
+}
+
+.btn-icon {
+  background: none;
+  border: 1px solid var(--border);
+  border-radius: 4px;
+  cursor: pointer;
+  font-size: 1.2rem;
+  padding: 2px 8px;
+  color: var(--text-muted);
+}
+
+.btn-icon:hover {
+  background: var(--bg);
+}

@@ -41,6 +41,19 @@
                         <button type="button" class="btn btn-secondary" id="classifyClearBtn">Clear</button>
                     </div>
                 </form>
+                <div class="divider"><span>or upload a file</span></div>
+
+                <div class="drop zone" id="dropZone">
+                    <div class="drop-zone-content" id="dropZoneContent">
+                        <p>Drag and drop a <strong>.txt</strong> or <strong>.pdf</strong> file here</p>
+                        <p class="drop-hint">or <label for="fileInput" class="file-label">browse files</label></p>
+                        <input type="file" id="fileInput" accept=".txt,.pdf" hidden>
+                    </div>
+                    <div class="file-info hidden" id="fileInfo">
+                        <span id="fileName"></span>
+                        <button type="button" class="btn-icon" id="fileRemoveBtn">&times;</button>
+                    </div>
+                </div>
             </div>
 
             <div id="singleResult" class="hidden"></div>

@@ -1,3 +1,4 @@
+let selectedFile = null;
 document.addEventListener('DOMContentLoaded', init);
 
 function init() {
@@ -5,6 +6,7 @@ function init() {
     setupClassifyForm();
     checkHealth();
     setInterval(checkHealth, 60000);
+    setupDropZone();
 }
 
 function setupTabs() {
@@ -59,15 +61,16 @@ function setupClassifyForm() {
 async function classifySingle(e) {
     e.preventDefault();
     const text = document.getElementById('classifyText').value.trim();
-    if (!text) {
-        showToast('Please enter email text to classify', 'error');
+    if (!text && !selectedFile) {
+        showToast('Please enter email text or select a file to classify', 'error');
         return;
     }
 
     setLoading('classifyBtn', true);
     try {
         const formData = new FormData();
-        formData.append('text', text);
+        if (text) formData.append('text', text);
+        if (selectedFile) formData.append('file', selectedFile);
 
         const res = await fetch('/api/classify', { method: 'POST', body: formData });
         const data = await res.json();
@@ -148,4 +151,46 @@ function escapeHtml(str) {
     const div = document.createElement('div');
     div.textContent = str;
     return div.innerHTML;
+}
+
+function setupDropZone() {
+    const zone = document.getElementById('dropZone');
+    const input = document.getElementById('fileInput');
+
+    zone.addEventListener('dragover', e => { e.preventDefault(); zone.classList.add('drag-over'); });
+    zone.addEventListener('dragleave', e => { e.preventDefault(); zone.classList.remove('drag-over'); });
+    zone.addEventListener('dragenter', e => { e.preventDefault(); zone.classList.add('drag-over'); });
+    zone.addEventListener('drop', e => {
+        e.preventDefault();
+        zone.classList.remove('drag-over');
+        if (e.dataTransfer.files.length) handleFile(e.dataTransfer.files[0]);
+    });
+
+    zone.addEventListener('click', () => input.click());
+    input.addEventListener('change', () => {if (input.files.length) handleFile(input.files[0]); });
+
+    document.getElementById('fileRemoveBtn').addEventListener('click', e => {
+        e.stopPropagation();
+        selectedFile = null;
+        input.value = '';
+        document.getElementById('fileInfo').classList.add('hidden');
+        document.getElementById('dropZoneContent').classList.remove('hidden');
+    });
+}
+
+function handleFile(file) {
+    const ext = file.name.split('.').pop().toLowerCase();
+    if (!['txt', 'pdf'].includes(ext)) {
+        showToast('Only .txt and .pdf files are supported', 'error');
+        return;
+    }
+    if (file.sizae > 5 * 1024 *1024) {
+        showToast('File size must be under 5MB', 'error');
+        return;
+    }
+
+    selectedFile = file;
+    document.getElementById('fileName').textContent = file.name;
+    document.getElementById('fileInfo').classList.remove('hidden');
+    document.getElementById('dropZoneContent').classList.add('hidden');
 }
