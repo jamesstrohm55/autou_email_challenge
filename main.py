@@ -15,7 +15,7 @@ import asyncio
 
 from services.file_parser import extract_text 
 from services.preprocessor import preprocess_email
-from services.classifier import classify_and_respond
+from services.classifier import ClassifierError, classify_and_respond
 from services.database import init_db, save_classification, get_stats, get_history
 
 load_dotenv()  #Load environment variables from .env file
@@ -42,6 +42,16 @@ async def rate_limit_handler(request, exc):
     return JSONResponse(
         status_code=429,
         content={"detail": "Rate limit exceeded. Please try again later."},
+    )
+    
+@app.exception_handler(ClassifierError)
+async def classifier_error_handler(request, exc):
+    return JSONResponse(
+        status_code=503,
+        content={
+            "detail": f"AI service unavailable: {exc.message}",
+            "classification": "Error",
+        }
     )
 
 

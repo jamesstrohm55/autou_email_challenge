@@ -47,17 +47,28 @@ REspond ONLY with valid JSON in this exact format:
     "suggested_reply": "A professional reply to this email"
 }"""
 
+class ClassifierError(Exception):
+    def __init__(self, message: str):
+        self.message = message
+
 
 async def classify_and_respond(original_text: str, preprocessed_text: str) -> dict:
     """Classify an email. If confidence is Low, retry with a more detailed prompt to try to get a better result."""
-    result = await _call_ai(original_text, preprocessed_text, SYSTEM_PROMPT)
+    try:
+        result = await _call_ai(original_text, preprocessed_text, SYSTEM_PROMPT)
+    except ClassifierError:
+        raise
+    
     was_retried = False
     
     if result.get("confidence") == "Low" and result.get("classification") not in ("Error", "Unknown"):
-        retry_result = await _call_ai(original_text, preprocessed_text, DETAILED_PROMPT)
-        if retry_result.get("classification") not in ("Error", "Unknown"):
-            result = retry_result
-            was_retried = True
+        try:
+            retry_result = await _call_ai(original_text, preprocessed_text, DETAILED_PROMPT)
+            if retry_result.get("classification") not in ("Error", "Unknown"):
+                result = retry_result
+                was_retried = True
+        except ClassifierError:
+            pass # Keep the original low confidence result if the retry also fails
             
     result["was_retried"] = was_retried  #Add this flag to the result for database logging
     return result
@@ -110,10 +121,5 @@ async def _call_ai(original_text: str, preprocessed_text: str, system_prompt: st
             }
             
     except Exception as e:
-        #Catch any APIU errors
-        return {
-            "classification": "Error",
-            "confidence": "Low",
-            "reasoning": f"API Error: {str(e)}",
-            "suggested_reply": "Unable to generate a suggested reply due to an error."
-        }
+        #Catch any API errors
+        raise ClassifierError(str(e))
