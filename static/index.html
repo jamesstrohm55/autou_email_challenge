@@ -4,10 +4,10 @@
 <head>
     <meta charset="UTF-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-    <title>Email Classifier</title>
+    <title>AutoU Email Classifier</title>
     <link rel="preconnect" href="https://fonts.googleapis.com" />
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
-    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet" />
+    <link href="https://fonts.googleapis.com/css2?family=IBM+Plex+Sans:wght@400;500;600;700&display=swap" rel="stylesheet" />
     <link rel="stylesheet" href="/static/css/style.css" />
 </head>
 
@@ -25,10 +25,12 @@
     </header>
 
     <nav class="tab-bar">
-        <button class="tab-btn active" data-tab="classify">Classify</button>
-        <button class="tab-btn" data-tab="batch">Batch</button>
-        <button class="tab-btn" data-tab="history">History</button>
-        <button class="tab-btn" data-tab="dashboard">Dashboard</button>
+        <div class="tab-bar-inner">
+            <button class="tab-btn active" data-tab="classify">Classify</button>
+            <button class="tab-btn" data-tab="batch">Batch</button>
+            <button class="tab-btn" data-tab="history">History</button>
+            <button class="tab-btn" data-tab="dashboard">Dashboard</button>
+        </div>
     </nav>
 
     <main class="container">
@@ -36,8 +38,14 @@
             <div class="card">
                 <h2 class="card-title">Classify an Email</h2>
                 <form id="classifyForm" autocomplete="off">
-                    <textarea id="classifyText" class="textarea" rows="8"
-                        placeholder="Paste email text here..."></textarea>
+                    <div class="textarea-wrap">
+                        <textarea id="classifyText" class="textarea" rows="8"
+                            placeholder="Paste email text here..."></textarea>
+                        <div class="textarea-footer">
+                            <span class="char-count" id="classifyCharCount">0 characters</span>
+                            <span class="kbd-hint">Ctrl+Enter to classify</span>
+                        </div>
+                    </div>
                     <div class="form-actions">
                         <button type="submit" class="btn btn-primary" id="classifyBtn">
                             <span class="btn-text">Classify Email</span>
@@ -46,12 +54,16 @@
                         <button type="button" class="btn btn-secondary" id="classifyClearBtn">
                             Clear
                         </button>
+                        <button type="button" class="btn btn-ghost" id="tryExampleBtn">
+                            Try an example
+                        </button>
                     </div>
                 </form>
                 <div class="divider"><span>or upload a file</span></div>
 
                 <div class="drop-zone" id="dropZone">
                     <div class="drop-zone-content" id="dropZoneContent">
+                        <svg class="drop-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="17 8 12 3 7 8"/><line x1="12" y1="3" x2="12" y2="15"/></svg>
                         <p>
                             Drag and drop a <strong>.txt</strong> or
                             <strong>.pdf</strong> file here
@@ -63,7 +75,11 @@
                         <input type="file" id="fileInput" accept=".txt,.pdf" hidden />
                     </div>
                     <div class="file-info hidden" id="fileInfo">
-                        <span id="fileName"></span>
+                        <svg class="file-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><polyline points="14 2 14 8 20 8"/></svg>
+                        <div class="file-details">
+                            <span id="fileName"></span>
+                            <span class="file-size" id="fileSize"></span>
+                        </div>
                         <button type="button" class="btn-icon" id="fileRemoveBtn">
                             &times;
                         </button>
@@ -95,6 +111,9 @@
                         <button type="button" class="btn btn-secondary" id="batchClearBtn">
                             Clear
                         </button>
+                        <button type="button" class="btn btn-ghost" id="tryBatchExampleBtn">
+                            Try an example
+                        </button>
                     </div>
                 </form>
             </div>
@@ -104,7 +123,13 @@
 
         <section class="tab-content hidden" id="tab-history">
             <div class="card">
-                <h2 class="card-title">Classification History</h2>
+                <div class="card-header">
+                    <h2 class="card-title" style="margin-bottom:0">Classification History</h2>
+                    <button class="btn btn-sm btn-ghost" id="exportCsvBtn" title="Export to CSV">
+                        <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="7 10 12 15 17 10"/><line x1="12" y1="15" x2="12" y2="3"/></svg>
+                        Export CSV
+                    </button>
+                </div>
                 <div class="table-wrap">
                     <table class="table" id="historyTable">
                         <thead>
@@ -131,15 +156,15 @@
 
         <section class="tab-content hidden" id="tab-dashboard">
             <div class="stats-grid">
-                <div class="stat-card">
+                <div class="stat-card stat-card--primary">
                     <div class="stat-value" id="statTotal">&mdash;</div>
                     <div class="stat-label">Total Classified</div>
                 </div>
-                <div class="stat-card">
+                <div class="stat-card stat-card--productive">
                     <div class="stat-value" id="statProductive">&mdash;</div>
                     <div class="stat-label">Productive %</div>
                 </div>
-                <div class="stat-card">
+                <div class="stat-card stat-card--amber">
                     <div class="stat-value" id="statRetried">&mdash;</div>
                     <div class="stat-label">Retried</div>
                 </div>
@@ -158,7 +183,7 @@
         </section>
     </main>
 
-    <div class="toast-container" id="toastContainer"></div>
+    <div class="toast-container" id="toastContainer" aria-live="polite" role="status"></div>
     <script src="/static/js/app.js"></script>
 </body>
 

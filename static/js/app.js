@@ -14,6 +14,7 @@ function init() {
     setupDropZone();
     setupBatchForm();
     setupHistoryPagination();
+    setupExportCsv();
 }
 
 function setupTabs() {
@@ -37,9 +38,9 @@ function switchTab(tabName) {
     section.classList.remove('hidden');
     section.classList.add('active');
 
-    // Lazy-load data
-    if (tabName === 'history' && !historyLoaded) loadHistory();
-    if (tabName === 'dashboard' && !dashboardLoaded) loadStats();
+    // Lazy-load data (always refresh on tab switch)
+    if (tabName === 'history') { historyPage = 0; loadHistory(); }
+    if (tabName === 'dashboard') loadStats();
 }
 
 async function checkHealth() {
@@ -61,11 +62,50 @@ async function checkHealth() {
     }
 }
 
+const EXAMPLE_EMAILS = [
+    "Hi Team,\n\nPlease find attached the Q4 compliance audit report for review. We need sign-off from all department heads by end of week. The key findings are summarized on page 3.\n\nRegards,\nSarah Chen\nCompliance Department",
+    "CONGRATULATIONS!!! You've been selected as our LUCKY WINNER! Claim your $10,000 prize NOW by clicking here! This offer expires in 24 HOURS! Act fast! Forward to 10 friends for BONUS prizes!!!",
+    "Dear Accounts Team,\n\nI wanted to follow up on invoice #4521 for the advisory services rendered in February. Our records show this is still outstanding. Could you please confirm the payment status and expected processing date?\n\nThank you,\nMichael Torres\nFinance Operations"
+];
+
 function setupClassifyForm() {
+    const textarea = document.getElementById('classifyText');
+    const charCount = document.getElementById('classifyCharCount');
+
     document.getElementById('classifyForm').addEventListener('submit', classifySingle);
+
+    // Character count
+    textarea.addEventListener('input', () => {
+        const len = textarea.value.length;
+        charCount.textContent = len.toLocaleString() + ' character' + (len !== 1 ? 's' : '');
+    });
+
+    // Ctrl+Enter to submit
+    textarea.addEventListener('keydown', e => {
+        if (e.ctrlKey && e.key === 'Enter') {
+            e.preventDefault();
+            document.getElementById('classifyForm').requestSubmit();
+        }
+    });
+
+    // Clear
     document.getElementById('classifyClearBtn').addEventListener('click', () => {
-        document.getElementById('classifyInput').value = '';
+        textarea.value = '';
+        charCount.textContent = '0 characters';
         document.getElementById('singleResult').classList.add('hidden');
+        selectedFile = null;
+        const input = document.getElementById('fileInput');
+        if (input) input.value = '';
+        document.getElementById('fileInfo').classList.add('hidden');
+        document.getElementById('dropZoneContent').classList.remove('hidden');
+    });
+
+    // Try an example
+    document.getElementById('tryExampleBtn').addEventListener('click', () => {
+        const example = EXAMPLE_EMAILS[Math.floor(Math.random() * EXAMPLE_EMAILS.length)];
+        textarea.value = example;
+        charCount.textContent = example.length.toLocaleString() + ' characters';
+        textarea.focus();
     });
 }
 
@@ -93,6 +133,9 @@ async function classifySingle(e) {
 
         renderSingleResult(data);
         showToast('Classification successful', 'success');
+        setTimeout(() => {
+            document.getElementById('singleResult').scrollIntoView({ behavior: 'smooth', block: 'nearest' });
+        }, 100);
     } catch {
         showToast('Network error occurred. Is the server running?', 'error');
     } finally {
@@ -202,8 +245,15 @@ function handleFile(file) {
 
     selectedFile = file;
     document.getElementById('fileName').textContent = file.name;
+    document.getElementById('fileSize').textContent = formatFileSize(file.size);
     document.getElementById('fileInfo').classList.remove('hidden');
     document.getElementById('dropZoneContent').classList.add('hidden');
+}
+
+function formatFileSize(bytes) {
+    if (bytes < 1024) return bytes + ' B';
+    if (bytes < 1024 * 1024) return (bytes / 1024).toFixed(1) + ' KB';
+    return (bytes / (1024 * 1024)).toFixed(1) + ' MB';
 }
 
 function setupBatchForm() {
@@ -224,6 +274,13 @@ function setupBatchForm() {
         textEl.value = '';
         document.getElementById('batchResults').classList.add('hidden');
         updateCount();
+    });
+
+    document.getElementById('tryBatchExampleBtn').addEventListener('click', () => {
+        const delim = delimEl.value || '---';
+        textEl.value = EXAMPLE_EMAILS.join('\n' + delim + '\n');
+        updateCount();
+        textEl.focus();
     });
 }
 
@@ -261,6 +318,9 @@ async function classifyBatch(e) {
 
         renderBatchResult(data);
         showToast(`Classified ${data.count} emails.`, 'success');
+        setTimeout(() => {
+            document.getElementById('batchResults').scrollIntoView({ behavior: 'smooth', block: 'nearest' });
+        }, 100);
     } catch {
         showToast('Network error occurred. Is the server running?', 'error');
     } finally {
@@ -273,10 +333,10 @@ function renderBatchResult(data) {
     const productive = data.results.filter(r => r.classification === 'Productive').length;
     const nonProductive = data.results.filter(r => r.classification === 'Non-Productive').length;
 
-    let html = ` <div class="batch-summary">
+    let html = `<div class="batch-summary">
         <span>Total: ${data.count}</span>
-        <span style="color: var(--productive)">Productive: ${productive}</span>
-        <span style="color: var(--non-productive)">Non-Productive: ${nonProductive}</span>
+        <span style="color: #6ee7b7">Productive: ${productive}</span>
+        <span style="color: #fca5a5">Non-Productive: ${nonProductive}</span>
     </div>`;
 
     data.results.forEach((result, i) => {
@@ -312,16 +372,32 @@ function renderBatchResult(data) {
 }
 
 // History
+function skeletonRows(count) {
+    return Array(count).fill('').map(() => `<tr>
+        <td><div class="skeleton skeleton-cell skeleton-cell--md"></div></td>
+        <td><div class="skeleton skeleton-cell skeleton-cell--sm"></div></td>
+        <td><div class="skeleton skeleton-cell skeleton-cell--sm"></div></td>
+        <td><div class="skeleton skeleton-cell skeleton-cell--lg"></div></td>
+        <td><div class="skeleton skeleton-cell skeleton-cell--sm"></div></td>
+    </tr>`).join('');
+}
+
 async function loadHistory() {
     const body = document.getElementById('historyBody');
-    body.innerHTML = '<tr><td colspan="5" class="table-empty">Loading...</td></tr>';
+    body.innerHTML = skeletonRows(5);
 
     try {
         const res = await fetch(`/api/history?limit=${PAGE_SIZE}&offset=${historyPage * PAGE_SIZE}`);
         const data = await res.json();
 
         if (data.length === 0 && historyPage === 0) {
-            body.innerHTML = '<tr><td colspan="5" class="table-empty">No classifications yet.</td></tr>';
+            body.innerHTML = `<tr><td colspan="5" class="table-empty">
+                <div class="empty-state">
+                    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5"><path d="M9 12h6m-6 4h6m2 5H7a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h5.586a1 1 0 0 1 .707.293l5.414 5.414a1 1 0 0 1 .293.707V19a2 2 0 0 1-2 2z"/></svg>
+                    <p>No classifications yet. Classify an email to see it here.</p>
+                    <button class="btn btn-primary btn-sm" onclick="switchTab('classify')">Classify an Email</button>
+                </div>
+            </td></tr>`;
             document.getElementById('prevPage').disabled = true;
             document.getElementById('nextPage').disabled = true;
             historyLoaded = true;
@@ -389,9 +465,9 @@ async function loadStats() {
             return;
         }
 
-        document.getElementById('statTotal').textContent = data.total;
-        document.getElementById('statProductive').textContent = data.productive_pct.toFixed(1) + '%';
-        document.getElementById('statRetried').textContent = data.retried;
+        animateCounter('statTotal', data.total);
+        animateCounter('statProductive', data.productive_pct, 1, '%');
+        animateCounter('statRetried', data.retried);
 
         renderBarChart('classificationChart', data.by_classification, data.total);
         renderBarChart('confidenceChart', data.by_confidence, data.total);
@@ -403,7 +479,8 @@ async function loadStats() {
 
 function renderBarChart(containerId, dataObj, total) {
     const container = document.getElementById(containerId);
-    container.innerHTML = Object.entries(dataObj).map(([label, count]) => {
+    const sorted = Object.entries(dataObj).sort((a, b) => b[1] - a[1]);
+    container.innerHTML = sorted.map(([label, count]) => {
         const pct = total > 0 ? (count / total * 100).toFixed(1) : 0;
         const color = BAR_COLORS[label] || 'var(--primary)';
         return `<div class="bar-row">
@@ -421,4 +498,60 @@ function renderBarChart(containerId, dataObj, total) {
             bar.style.width = bar.dataset.width;
         });
     }, 50);
+}
+
+// Animated number counter
+function animateCounter(elementId, target, decimals = 0, suffix = '') {
+    const el = document.getElementById(elementId);
+    const duration = 800;
+    const start = performance.now();
+    const from = 0;
+
+    function update(now) {
+        const elapsed = now - start;
+        const progress = Math.min(elapsed / duration, 1);
+        // Ease out cubic
+        const eased = 1 - Math.pow(1 - progress, 3);
+        const current = from + (target - from) * eased;
+        el.textContent = current.toFixed(decimals) + suffix;
+        if (progress < 1) requestAnimationFrame(update);
+    }
+    requestAnimationFrame(update);
+}
+
+// Export history to CSV
+function setupExportCsv() {
+    document.getElementById('exportCsvBtn').addEventListener('click', async () => {
+        try {
+            const res = await fetch('/api/history?limit=1000&offset=0');
+            const data = await res.json();
+            if (data.length === 0) {
+                showToast('No data to export.', 'error');
+                return;
+            }
+
+            const headers = ['Time', 'Classification', 'Confidence', 'Input Text', 'Reasoning', 'Suggested Reply', 'Retried'];
+            const rows = data.map(row => [
+                row.timestamp,
+                row.classification,
+                row.confidence,
+                '"' + (row.input_text || '').replace(/"/g, '""') + '"',
+                '"' + (row.reasoning || '').replace(/"/g, '""') + '"',
+                '"' + (row.suggested_reply || '').replace(/"/g, '""') + '"',
+                row.was_retried ? 'Yes' : 'No'
+            ]);
+
+            const csv = [headers.join(','), ...rows.map(r => r.join(','))].join('\n');
+            const blob = new Blob([csv], { type: 'text/csv' });
+            const url = URL.createObjectURL(blob);
+            const a = document.createElement('a');
+            a.href = url;
+            a.download = 'classification-history.csv';
+            a.click();
+            URL.revokeObjectURL(url);
+            showToast('History exported to CSV.', 'success');
+        } catch {
+            showToast('Failed to export history.', 'error');
+        }
+    });
 }
