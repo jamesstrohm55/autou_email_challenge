@@ -5,6 +5,7 @@ An email classification app for financial services. Upload or paste an email, an
 ## Tech Stack
 
 - **Backend**: FastAPI + Uvicorn
+- **Frontend**: Plain HTML/CSS/JS (no build tools)
 - **NLP**: NLTK (stopword removal, lemmatization)
 - **AI**: OpenRouter API (Nvidia Nemotron model)
 - **File Parsing**: pdfplumber for PDFs, UTF-8/Latin-1 for text files
@@ -104,6 +105,17 @@ curl http://localhost:8000/api/history
 curl "http://localhost:8000/api/history?limit=5&offset=0"
 ```
 
+## Frontend
+
+A single-page app served at `http://localhost:8000` with four tabs:
+
+- **Classify** — Paste email text or drag-and-drop a `.txt`/`.pdf` file for classification
+- **Batch** — Classify multiple emails at once, separated by a configurable delimiter
+- **History** — Paginated table of past classifications
+- **Dashboard** — Stats cards and bar charts showing classification/confidence breakdowns
+
+The UI includes a live health indicator, toast notifications, loading spinners, color-coded results (green for Productive, red for Non-Productive), confidence badges, and a copy button for suggested replies.
+
 ## Features
 
 - **NLP Preprocessing**: Email header removal, text cleaning, stopword removal, lemmatization
@@ -112,3 +124,5 @@ curl "http://localhost:8000/api/history?limit=5&offset=0"
 - **Analytics**: SQLite-backed classification history with stats dashboard endpoint
 - **Rate Limiting**: 10 req/min for single classify, 5 req/min for batch
 - **Error Handling**: Proper HTTP status codes (400 bad input, 429 rate limited, 503 AI unavailable)
+- **File Upload**: Drag-and-drop or browse for `.txt` and `.pdf` files (5MB limit)
+- **Responsive UI**: Mobile-friendly layout with card-based design
