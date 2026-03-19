@@ -126,3 +126,20 @@ The UI includes a live health indicator, toast notifications, loading spinners, 
 - **Error Handling**: Proper HTTP status codes (400 bad input, 429 rate limited, 503 AI unavailable)
 - **File Upload**: Drag-and-drop or browse for `.txt` and `.pdf` files (5MB limit)
 - **Responsive UI**: Mobile-friendly layout with card-based design
+- **CSV Export**: Download classification history as a CSV file
+- **Keyboard Shortcuts**: Ctrl+Enter to classify
+- **Try Examples**: Pre-loaded sample emails for quick demos
+- **Animated Dashboard**: Counting animations, animated bar charts, skeleton loading
+
+## Live Demo
+
+Deployed on Render: **[URL will be added after deploy]**
+
+## Deployment
+
+This app is configured for Render.com deployment via `render.yaml`. To deploy:
+
+1. Push to a public GitHub repo
+2. Connect the repo on [Render Dashboard](https://dashboard.render.com)
+3. Set the `OPENROUTER_API_KEY` environment variable
+4. Deploy — NLTK data downloads automatically during build
