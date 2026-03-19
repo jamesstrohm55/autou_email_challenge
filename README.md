@@ -35,7 +35,7 @@ Server starts at `http://localhost:8000`.
 
 ### POST /api/classify
 
-Classify a single email via text or file upload.
+Classify a single email via text or file upload. Rate limited to 10 requests/minute.
 
 **Text input:**
 ```bash
@@ -62,7 +62,7 @@ curl -X POST http://localhost:8000/api/classify -F "file=@email.txt"
 
 ### POST /api/classify/batch
 
-Classify up to 20 emails in a single request.
+Classify up to 20 emails in a single request. Rate limited to 5 requests/minute.
 
 ```bash
 curl -X POST http://localhost:8000/api/classify/batch -H "Content-Type: application/json" -d "{\"emails\": [\"Please send the Q4 audit report\", \"FLASH SALE 70% OFF!!!\"]}"
@@ -77,6 +77,14 @@ curl -X POST http://localhost:8000/api/classify/batch -H "Content-Type: applicat
     {"classification": "Non-Productive", "confidence": "High", "...": "..."}
   ]
 }
+```
+
+### GET /api/health
+
+Check API key and OpenRouter connectivity.
+
+```bash
+curl http://localhost:8000/api/health
 ```
 
 ### GET /api/stats
@@ -102,3 +110,5 @@ curl "http://localhost:8000/api/history?limit=5&offset=0"
 - **Confidence Retry**: Low-confidence classifications are automatically retried with a more detailed prompt
 - **Batch Processing**: Classify up to 20 emails in parallel with a single API call
 - **Analytics**: SQLite-backed classification history with stats dashboard endpoint
+- **Rate Limiting**: 10 req/min for single classify, 5 req/min for batch
+- **Error Handling**: Proper HTTP status codes (400 bad input, 429 rate limited, 503 AI unavailable)
