@@ -50,7 +50,7 @@
                 </form>
                 <div class="divider"><span>or upload a file</span></div>
 
-                <div class="drop zone" id="dropZone">
+                <div class="drop-zone" id="dropZone">
                     <div class="drop-zone-content" id="dropZoneContent">
                         <p>
                             Drag and drop a <strong>.txt</strong> or
@@ -104,7 +104,28 @@
 
         <section class="tab-content hidden" id="tab-history">
             <div class="card">
-                <h2>History tab</h2>
+                <h2 class="card-title">Classification History</h2>
+                <div class="table-wrap">
+                    <table class="table" id="historyTable">
+                        <thead>
+                            <tr>
+                                <th>Time</th>
+                                <th>Classification</th>
+                                <th>Confidence</th>
+                                <th>Preview</th>
+                                <th>Retried</th>
+                            </tr>
+                        </thead>
+                        <tbody id="historyBody">
+                            <tr><td colspan="5" class="table-empty">Loading...</td></tr>
+                        </tbody>
+                    </table>
+                </div>
+                <div class="pagination">
+                    <button class="btn btn-sm" id="prevPage" disabled>&larr; Previous</button>
+                    <span class="page-info" id="pageInfo">Page 1</span>
+                    <button class="btn btn-sm" id="nextPage">Next &rarr;</button>
+                </div>
             </div>
         </section>
 

@@ -1,4 +1,9 @@
 let selectedFile = null;
+let historyPage = 0;
+const PAGE_SIZE = 20;
+let historyLoaded = false;
+let dashboardLoaded = false;
+
 document.addEventListener('DOMContentLoaded', init);
 
 function init() {
@@ -8,6 +13,7 @@ function init() {
     setInterval(checkHealth, 60000);
     setupDropZone();
     setupBatchForm();
+    setupHistoryPagination();
 }
 
 function setupTabs() {
@@ -30,6 +36,10 @@ function switchTab(tabName) {
     const section = document.getElementById('tab-' + tabName);
     section.classList.remove('hidden');
     section.classList.add('active');
+
+    // Lazy-load data
+    if (tabName === 'history' && !historyLoaded) loadHistory();
+    if (tabName === 'dashboard' && !dashboardLoaded) loadStats();
 }
 
 async function checkHealth() {
@@ -185,7 +195,7 @@ function handleFile(file) {
         showToast('Only .txt and .pdf files are supported', 'error');
         return;
     }
-    if (file.sizae > 5 * 1024 *1024) {
+    if (file.size > 5 * 1024 * 1024) {
         showToast('File size must be under 5MB', 'error');
         return;
     }
@@ -202,8 +212,8 @@ function setupBatchForm() {
     const countEl = document.getElementById('emailCount');
 
     function updateCount() {
-        const count = spliBatch().length;
-        countEl.textContent = count + 'email' + (count !== 1 ? 's' : '') + ' detected';
+        const count = splitBatch().length;
+        countEl.textContent = count + ' email' + (count !== 1 ? 's' : '') + ' detected';
     }
 
     textEl.addEventListener('input', updateCount);
@@ -212,7 +222,7 @@ function setupBatchForm() {
     document.getElementById('batchForm').addEventListener('submit', classifyBatch);
     document.getElementById('batchClearBtn').addEventListener('click', () => {
         textEl.value = '';
-        document.getElementById('batchResult').classList.add('hidden');
+        document.getElementById('batchResults').classList.add('hidden');
         updateCount();
     });
 }
@@ -299,4 +309,58 @@ function renderBatchResult(data) {
 
     container.innerHTML = html;
     container.classList.remove('hidden');
+}
+
+// History
+async function loadHistory() {
+    const body = document.getElementById('historyBody');
+    body.innerHTML = '<tr><td colspan="5" class="table-empty">Loading...</td></tr>';
+
+    try {
+        const res = await fetch(`/api/history?limit=${PAGE_SIZE}&offset=${historyPage * PAGE_SIZE}`);
+        const data = await res.json();
+
+        if (data.length === 0 && historyPage === 0) {
+            body.innerHTML = '<tr><td colspan="5" class="table-empty">No classifications yet.</td></tr>';
+            document.getElementById('prevPage').disabled = true;
+            document.getElementById('nextPage').disabled = true;
+            historyLoaded = true;
+            return;
+        }
+
+        body.innerHTML = data.map(row => {
+            const cls = row.classification === 'Productive' ? 'productive' : 'non-productive';
+            const clsBadge = cls === 'productive' ? 'badge-productive' : 'badge-non-productive';
+            const confBadge = row.confidence ? 'badge-' + row.confidence.toLowerCase() : '';
+            const preview = row.input_text.length > 80 ? row.input_text.slice(0, 80) + '...' : row.input_text;
+            return `<tr>
+                <td>${formatTime(row.timestamp)}</td>
+                <td><span class="badge ${clsBadge}">${escapeHtml(row.classification)}</span></td>
+                <td><span class="badge ${confBadge}">${escapeHtml(row.confidence)}</span></td>
+                <td class="preview-text" title="${escapeHtml(row.input_text)}">${escapeHtml(preview)}</td>
+                <td>${row.was_retried ? 'Yes' : 'No'}</td>
+            </tr>`;
+        }).join('');
+
+        document.getElementById('prevPage').disabled = historyPage === 0;
+        document.getElementById('nextPage').disabled = data.length < PAGE_SIZE;
+        document.getElementById('pageInfo').textContent = 'Page ' + (historyPage + 1);
+        historyLoaded = true;
+    } catch {
+        body.innerHTML = '<tr><td colspan="5" class="table-empty">Failed to load history.</td></tr>';
+    }
+}
+
+function formatTime(iso) {
+    return new Date(iso).toLocaleString();
+}
+
+function setupHistoryPagination() {
+    document.getElementById('prevPage').addEventListener('click', () => {
+        if (historyPage > 0) { historyPage--; loadHistory(); }
+    });
+    document.getElementById('nextPage').addEventListener('click', () => {
+        historyPage++;
+        loadHistory();
+    });
 }
