@@ -1,0 +1,65 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Email Classifier</title>
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
+    <link rel="stylesheet" href="/static/css/style.css">
+</head>
+<body>
+    <header class="header">
+        <div class="header-inner">
+            <h1 class="logo">AutoU <span class="logo-sub">Email Classifier</span></h1>
+            <div class="health-indicator">
+                <span class="health-dot" id="healthDot"></span>
+                <span id="healthText">Checking health...</span>
+            </div>
+        </div>
+    </header>
+
+    <nav class="tab-bar">
+        <button class="tab-btn active" data-tab="classify">Classify</button>
+        <button class="tab-btn" data-tab="batch">Batch</button>
+        <button class="tab-btn" data-tab="history">History</button>
+        <button class="tab-btn" data-tab="dashboard">Dashboard</button>
+    </nav>
+
+    <main class="container">
+        <section class="tab-content active" id="tab-classify">
+            <div class="card">
+                <h2 class="card-title">Classify an Email</h2>
+                <form id="classifyForm" autocomplete="off">
+                    <textarea id="classifyText" class="textarea" rows="8" placeholder="Paste email text here..."></textarea>
+                    <div class="form-actions">
+                        <button type="submit" class="btn btn-primary" id="classifyBtn">
+                            <span class="btn-text">Classify Email</span>
+                            <span class="spinner hidden"></span>
+                        </button>
+                        <button type="button" class="btn btn-secondary" id="classifyClearBtn">Clear</button>
+                    </div>
+                </form>
+            </div>
+
+            <div id="singleResult" class="hidden"></div>
+        </section>
+
+        <section class="tab-content hidden" id="tab-batch">
+            <div class="card"><h2>Batch tab</h2></div>
+        </section>
+
+        <section class="tab-content hidden" id="tab-history">
+            <div class="card"><h2>History tab</h2></div>
+        </section>
+
+        <section class="tab-content hidden" id="tab-dashboard">
+            <div class="card"><h2>Dashboard tab</h2></div>
+        </section>
+    </main>
+
+    <div class="toast-container" id="toastContainer"></div>
+    <script src="/static/js/app.js"></script>
+</body>
+</html>
