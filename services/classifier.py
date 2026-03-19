@@ -40,13 +40,21 @@ async def classify_and_respond(original_text: str, preprocesssed_text: str) -> d
                         {"role": "user", "content": f"Original email:\n{original_text}\n\nPreprocessed keywords:\n{preprocesssed_text}"}
                     ],
                     "temperature": 0.3,
-                    "max_tokens": 512
+                    "max_tokens": 1024
                 },
                 timeout=30,
             )
 
             data = response.json()
             content = data["choices"][0]["message"]["content"]
+            
+            if not content:
+                return {
+                    "classification": "Unknown",
+                    "confidence": "Low",
+                    "reasoning": "No response content received from AI. Try again",
+                    "suggested_reply": "Unable to generate a suggested reply due to lack of response content."
+                }
             
             try:
                 return json.loads(content)
@@ -66,7 +74,7 @@ async def classify_and_respond(original_text: str, preprocesssed_text: str) -> d
             }
             
     except Exception as e:
-        #Catch any APIU errors
+        #Catch any API errors
         return {
             "classification": "Error",
             "confidence": "Low",
