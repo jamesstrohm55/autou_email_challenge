@@ -364,3 +364,61 @@ function setupHistoryPagination() {
         loadHistory();
     });
 }
+
+// Dashboard
+const BAR_COLORS = {
+    'Productive': 'var(--productive)',
+    'Non-Productive': 'var(--non-productive)',
+    'High': 'var(--confidence-high)',
+    'Medium': 'var(--confidence-medium)',
+    'Low': 'var(--confidence-low)'
+};
+
+async function loadStats() {
+    try {
+        const res = await fetch('/api/stats');
+        const data = await res.json();
+
+        if (data.message) {
+            document.getElementById('statTotal').textContent = '0';
+            document.getElementById('statProductive').textContent = '—';
+            document.getElementById('statRetried').textContent = '0';
+            document.getElementById('classificationChart').innerHTML = '<p style="color:var(--text-muted);font-size:0.85rem">No data yet.</p>';
+            document.getElementById('confidenceChart').innerHTML = '<p style="color:var(--text-muted);font-size:0.85rem">No data yet.</p>';
+            dashboardLoaded = true;
+            return;
+        }
+
+        document.getElementById('statTotal').textContent = data.total;
+        document.getElementById('statProductive').textContent = data.productive_pct.toFixed(1) + '%';
+        document.getElementById('statRetried').textContent = data.retried;
+
+        renderBarChart('classificationChart', data.by_classification, data.total);
+        renderBarChart('confidenceChart', data.by_confidence, data.total);
+        dashboardLoaded = true;
+    } catch {
+        showToast('Failed to load dashboard stats.', 'error');
+    }
+}
+
+function renderBarChart(containerId, dataObj, total) {
+    const container = document.getElementById(containerId);
+    container.innerHTML = Object.entries(dataObj).map(([label, count]) => {
+        const pct = total > 0 ? (count / total * 100).toFixed(1) : 0;
+        const color = BAR_COLORS[label] || 'var(--primary)';
+        return `<div class="bar-row">
+            <span class="bar-label">${escapeHtml(label)}</span>
+            <div class="bar-track">
+                <div class="bar-fill" style="background:${color}" data-width="${pct}%"></div>
+            </div>
+            <span class="bar-value">${count} (${pct}%)</span>
+        </div>`;
+    }).join('');
+
+    // Animate bars after render
+    setTimeout(() => {
+        container.querySelectorAll('.bar-fill').forEach(bar => {
+            bar.style.width = bar.dataset.width;
+        });
+    }, 50);
+}

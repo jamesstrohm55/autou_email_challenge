@@ -130,8 +130,30 @@
         </section>
 
         <section class="tab-content hidden" id="tab-dashboard">
-            <div class="card">
-                <h2>Dashboard tab</h2>
+            <div class="stats-grid">
+                <div class="stat-card">
+                    <div class="stat-value" id="statTotal">&mdash;</div>
+                    <div class="stat-label">Total Classified</div>
+                </div>
+                <div class="stat-card">
+                    <div class="stat-value" id="statProductive">&mdash;</div>
+                    <div class="stat-label">Productive %</div>
+                </div>
+                <div class="stat-card">
+                    <div class="stat-value" id="statRetried">&mdash;</div>
+                    <div class="stat-label">Retried</div>
+                </div>
+            </div>
+
+            <div class="charts-grid">
+                <div class="card">
+                    <h3 class="card-title">By Classification</h3>
+                    <div class="bar-chart" id="classificationChart"></div>
+                </div>
+                <div class="card">
+                    <h3 class="card-title">By Confidence</h3>
+                    <div class="bar-chart" id="confidenceChart"></div>
+                </div>
             </div>
         </section>
     </main>
