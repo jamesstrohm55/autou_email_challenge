@@ -7,6 +7,7 @@ function init() {
     checkHealth();
     setInterval(checkHealth, 60000);
     setupDropZone();
+    setupBatchForm();
 }
 
 function setupTabs() {
@@ -193,4 +194,109 @@ function handleFile(file) {
     document.getElementById('fileName').textContent = file.name;
     document.getElementById('fileInfo').classList.remove('hidden');
     document.getElementById('dropZoneContent').classList.add('hidden');
+}
+
+function setupBatchForm() {
+    const textEl = document.getElementById('batchText');
+    const delimEl = document.getElementById('batchDelimiter');
+    const countEl = document.getElementById('emailCount');
+
+    function updateCount() {
+        const count = spliBatch().length;
+        countEl.textContent = count + 'email' + (count !== 1 ? 's' : '') + ' detected';
+    }
+
+    textEl.addEventListener('input', updateCount);
+    delimEl.addEventListener('input', updateCount);
+
+    document.getElementById('batchForm').addEventListener('submit', classifyBatch);
+    document.getElementById('batchClearBtn').addEventListener('click', () => {
+        textEl.value = '';
+        document.getElementById('batchResult').classList.add('hidden');
+        updateCount();
+    });
+}
+
+function splitBatch() {
+    const text = document.getElementById('batchText').value;
+    const delim = document.getElementById('batchDelimiter').value || '---';
+    return text.split(delim).map(s => s.trim()).filter(s => s.length > 0);
+}
+
+async function classifyBatch(e) {
+    e.preventDefault();
+    const emails = splitBatch();
+    if (emails.length === 0) {
+        showToast('No emails to classify.', 'error');
+        return;
+    }
+    if (emails.length > 20) {
+        showToast('Maximum 20 emails per batch.', 'error');
+        return;
+    }
+
+    setLoading('batchBtn', true);
+    try {
+        const res = await fetch('/api/classify/batch', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json'},
+            body: JSON.stringify({ emails })
+        });
+        const data = await res.json();
+
+        if (!res.ok) {
+            showToast(data.detail || 'Batch classification failed', 'error');
+            return;
+        }
+
+        renderBatchResult(data);
+        showToast(`Classified ${data.count} emails.`, 'success');
+    } catch {
+        showToast('Network error occurred. Is the server running?', 'error');
+    } finally {
+        setLoading('batchBtn', false);
+    }
+}
+
+function renderBatchResult(data) {
+    const container = document.getElementById('batchResults');
+    const productive = data.results.filter(r => r.classification === 'Productive').length;
+    const nonProductive = data.results.filter(r => r.classification === 'Non-Productive').length;
+
+    let html = ` <div class="batch-summary">
+        <span>Total: ${data.count}</span>
+        <span style="color: var(--productive)">Productive: ${productive}</span>
+        <span style="color: var(--non-productive)">Non-Productive: ${nonProductive}</span>
+    </div>`;
+
+    data.results.forEach((result, i) => {
+        const cls = result.classification === 'Productive' ? 'productive' : 'non-productive';
+        const clsBadge = cls === 'productive' ? 'badge-productive' : 'badge-non-productive';
+        const confBadge = result.confidence ? 'badge-' + result.confidence.toLowerCase() : '';
+
+        html += `
+        <div class="result-card ${cls}">
+            <div class="result-header">
+                <strong>Email ${i + 1}</strong>
+                <span class="badge ${clsBadge}">${escapeHtml(result.classification)}</span>
+                ${result.confidence ? `<span class="badge ${confBadge}">${escapeHtml(result.confidence)}</span>` : ''}
+            </div>
+            <div class="result-section">
+                <div class="result-text">${escapeHtml(result.reasoning)}</div>
+            </div>
+            ${result.suggested_reply ? `
+                <div class="result-section">
+                    <div class="result-label">Suggested Response</div>
+                    <div class="suggested-reply">
+                        <button class="copy-btn" onclick="copyReply(this)">Copy</button>
+                        <div class="result-text reply-text">${escapeHtml(result.suggested_reply)}</div>
+                    </div>
+                </div>
+            ` : ''}
+        </div>
+        `;
+    });
+
+    container.innerHTML = html;
+    container.classList.remove('hidden');
 }
