@@ -1,7 +1,10 @@
-from fastapi import FastAPI, UploadFile, File, Form, HTTPException
+from fastapi import FastAPI, Request, UploadFile, File, Form, HTTPException
 from fastapi.staticfiles import StaticFiles
-from fastapi.responses import FileResponse
+from fastapi.responses import FileResponse, JSONResponse
 from fastapi.middleware.cors import CORSMiddleware
+from slowapi import Limiter
+from slowapi.util import get_remote_address
+from slowapi.errors import RateLimitExceeded
 from pydantic import BaseModel
 from dotenv import load_dotenv
 from contextlib import asynccontextmanager
@@ -29,6 +32,19 @@ async def lifespan(app: FastAPI):
 
 app = FastAPI(title="Email Classifier", lifespan=lifespan)  #Use the lifespan function to run setup code on startup
 
+#Set up rate limiting: max 10 requests per minute per IP address to prevent abuse
+limiter = Limiter(key_func=get_remote_address)
+app.state.limiter = limiter  #Attach the limiter to the app state so we can use it in our endpoints
+
+@app.exception_handler(RateLimitExceeded)
+async def rate_limit_handler(request, exc):
+    """Return a 429 Too Many Requests response when rate limit is exceeded."""
+    return JSONResponse(
+        status_code=429,
+        content={"detail": "Rate limit exceeded. Please try again later."},
+    )
+
+
 # CORS middleware: allows the frontend (running on a different port/origin) to call our API
 app.add_middleware(
     CORSMiddleware,
@@ -50,7 +66,9 @@ async def root():
     return FileResponse("static/index.html")  #Serve the main HTML file for the frontend
 
 @app.post("/api/classify")
+@limiter.limit("10/minute")
 async def classify_email(
+    request: Request,
     file: UploadFile = File(None),      #Optional file upload
     text: str = Form(None),             #Optional text field
 ):
@@ -89,10 +107,11 @@ async def classify_email(
     return response
 
 @app.post("/api/classify/batch")
-async def classify_batch(request: BatchRequest):
-    if not request.emails:
+@limiter.limit("5/minute")
+async def classify_batch(request: Request, batch: BatchRequest):
+    if not batch.emails:
         raise HTTPException(400, "Email list cannot be empty.")
-    if len(request.emails) > 20:
+    if len(batch.emails) > 20:
         raise HTTPException(400, "Batch size cannot exceed 20 emails.")
     
     async def process_one(email_text: str) -> dict:
@@ -112,7 +131,7 @@ async def classify_batch(request: BatchRequest):
         save_classification(text, response, ai_result.get("was_retried", False))
         return response
     
-    results = await asyncio.gather(*[process_one(email) for email in request.emails])
+    results = await asyncio.gather(*[process_one(email) for email in batch.emails])
     
     return {
         "count": len(results),
