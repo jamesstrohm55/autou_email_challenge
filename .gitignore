@@ -1,0 +1,6 @@
+.claude/
+.env
+__pycache__/
+*.pyc
+nltk_data/
+.venv/
