@@ -4,3 +4,5 @@ __pycache__/
 *.pyc
 nltk_data/
 .venv/
+classifications.db
+.gitignore

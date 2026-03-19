@@ -1,13 +1,12 @@
 import os
 import re
 import json
-from openai import OpenAI
 
 #System prompt tells AI what role to play and how to format it's respnse
 SYSTEM_PROMPT = """You are an email classifier for a financial services company.
 Classify incoming emails into one of the following categories: "Productive" or "Non-Productive". 
 
-Productive emails: client requestrs, transaction inquiries, compliance questions, 
+Productive emails: Client requestrs, transaction inquiries, compliance questions, 
 account updates, meeting requests about buisness, financial reports, regulatory matters
 
 Non-Productive emails: spam, phishing, personal messages, neewsletters, holiday grettings,
@@ -21,8 +20,50 @@ Respond ONLY wioth valid JSON in this exact format:
     "suggested_reply": "A professional reply to this email"
 }"""
 
+DETAILED_PROMPT = """You are an email classifier for a financial services company. A previous classification attempt returned
+"Unknown" with "Low" confidence. Please analyze the email content and provide a more detailed classification.
 
-async def classify_and_respond(original_text: str, preprocesssed_text: str) -> dict:
+Classify the email as "Productive" or "Non-Productive".
+
+Productive indicators:
+- Mentions specific account numbers, clients, or transactions
+- Requests action on buisness matters (audits, reports, compliance)
+- Discusses financial data, regulations, or deadlines
+- Scheduling meetings about work topics
+
+Non-Productive indicators:
+- No buisness content whatsoever
+- Purely social, personal or promotional content
+- Spam, phishing, chain letters
+- Newsletters, jokes, memes, irrelevant content
+
+If the email mixes both personal and buisness content, classify based on the PRIMARY intent.
+
+REspond ONLY with valid JSON in this exact format:
+{
+    "classification": "Productive" or "Non-Productive",
+    "confidence": "High", "Medium", or "Low",
+    "reasoning": "Brief explaination of why",
+    "suggested_reply": "A professional reply to this email"
+}"""
+
+
+async def classify_and_respond(original_text: str, preprocessed_text: str) -> dict:
+    """Classify an email. If confidence is Low, retry with a more detailed prompt to try to get a better result."""
+    result = await _call_ai(original_text, preprocessed_text, SYSTEM_PROMPT)
+    was_retried = False
+    
+    if result.get("confidence") == "Low" and result.get("classification") not in ("Error", "Unknown"):
+        retry_result = await _call_ai(original_text, preprocessed_text, DETAILED_PROMPT)
+        if retry_result.get("classification") not in ("Error", "Unknown"):
+            result = retry_result
+            was_retried = True
+            
+    result["was_retried"] = was_retried  #Add this flag to the result for database logging
+    return result
+
+async def _call_ai(original_text: str, preprocessed_text: str, system_prompt: str) -> dict:
+    """Make a single API call to OpenRouter with the given system prompt and user content, return the parsed response as a dict."""
     import httpx
     
     try:
@@ -37,7 +78,7 @@ async def classify_and_respond(original_text: str, preprocesssed_text: str) -> d
                     "model": "nvidia/nemotron-3-nano-30b-a3b:free",
                     "messages": [
                         {"role": "system", "content": SYSTEM_PROMPT},
-                        {"role": "user", "content": f"Original email:\n{original_text}\n\nPreprocessed keywords:\n{preprocesssed_text}"}
+                        {"role": "user", "content": f"Original email:\n{original_text}\n\nPreprocessed keywords:\n{preprocessed_text}"}
                     ],
                     "temperature": 0.3,
                     "max_tokens": 1024
@@ -49,12 +90,7 @@ async def classify_and_respond(original_text: str, preprocesssed_text: str) -> d
             content = data["choices"][0]["message"]["content"]
             
             if not content:
-                return {
-                    "classification": "Unknown",
-                    "confidence": "Low",
-                    "reasoning": "No response content received from AI. Try again",
-                    "suggested_reply": "Unable to generate a suggested reply due to lack of response content."
-                }
+                return
             
             try:
                 return json.loads(content)
@@ -74,7 +110,7 @@ async def classify_and_respond(original_text: str, preprocesssed_text: str) -> d
             }
             
     except Exception as e:
-        #Catch any API errors
+        #Catch any APIU errors
         return {
             "classification": "Error",
             "confidence": "Low",

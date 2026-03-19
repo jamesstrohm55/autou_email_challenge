@@ -2,19 +2,32 @@ from fastapi import FastAPI, UploadFile, File, Form, HTTPException
 from fastapi.staticfiles import StaticFiles
 from fastapi.responses import FileResponse
 from fastapi.middleware.cors import CORSMiddleware
+from pydantic import BaseModel
 from dotenv import load_dotenv
 from contextlib import asynccontextmanager
 import os
 import nltk
+import asyncio
 
 
 from services.file_parser import extract_text 
 from services.preprocessor import preprocess_email
 from services.classifier import classify_and_respond
+from services.database import init_db, save_classification, get_stats, get_history
 
 load_dotenv()  #Load environment variables from .env file
 
-app = FastAPI(title="Email Classifier")
+@asynccontextmanager
+async def lifespan(app: FastAPI):
+    """Download NLTK data on first run. Runs once when the server starts."""
+    #Quiet=True suppresses download messages, we just want the data to be there for preprocessing, gets saved in nltk_data/ folder which is gitignored
+    nltk.download('stopwords', quiet=True)
+    nltk.download('wordnet', quiet=True)
+    nltk.download('omw-1.4', quiet=True)  #For lemmatizer language data
+    init_db()  #Initialize the SQLite database and create tables if they don't exist
+    yield  #Lifespan functions must be async generators, so we yield control back to FastAPI after setup 
+
+app = FastAPI(title="Email Classifier", lifespan=lifespan)  #Use the lifespan function to run setup code on startup
 
 # CORS middleware: allows the frontend (running on a different port/origin) to call our API
 app.add_middleware(
@@ -28,16 +41,8 @@ app.add_middleware(
 
 app.mount("/static", StaticFiles(directory="static"), name="static")  #Serve static files like HTML/CSS/JS
 
-
-@asynccontextmanager
-async def lifespan(app: FastAPI):
-    """Download NLTK data on first run. Runs once when the server starts."""
-    #Quiet=True suppresses download messages, we just want the data to be there for preprocessing, gets saved in nltk_data/ folder which is gitignored
-    nltk.download('stopwords', quiet=True)
-    nltk.download('wordnet', quiet=True)
-    nltk.download('omw-1.4', quiet=True)  #For lemmatizer language data
-    yield  #Lifespan functions must be async generators, so we yield control back to FastAPI after setup 
-
+class BatchRequest(BaseModel):
+    emails: list[str]  #List of raw email texts to classify in batch
 
 @app.get("/")
 async def root():
@@ -73,11 +78,56 @@ async def classify_email(
     ai_result = await classify_and_respond(result["original_clean"], result["preprocessed"])
     
     #Return AI result plus some metadata about the text lengths for frontend display
-    return {
+    response = {
         **ai_result,  #Classification, confidence, reasoning, suggested_reply from AI
         "original_length": len(result["original_clean"]), # How long the cleaned email was
         "preprocessed_length": len(result["preprocessed"]), # How long after stopword removal
     }
+    
+    save_classification(raw_text, response, ai_result.get("was_retried", False))  #Save the original input and AI result to the database for stats/dashboard
+    
+    return response
+
+@app.post("/api/classify/batch")
+async def classify_batch(request: BatchRequest):
+    if not request.emails:
+        raise HTTPException(400, "Email list cannot be empty.")
+    if len(request.emails) > 20:
+        raise HTTPException(400, "Batch size cannot exceed 20 emails.")
+    
+    async def process_one(email_text: str) -> dict:
+        text = email_text.strip()
+        if not text:
+            return {"classification" : "Error", "reasoning": "Email text cannot be empty."}
+        
+        result = preprocess_email(text)
+        ai_result = await classify_and_respond(result["original_clean"], result["preprocessed"])
+        
+        response = {
+            **ai_result,
+            "original_length": len(result["original_clean"]),
+            "preprocessed_length": len(result["preprocessed"]),
+        }
+        
+        save_classification(text, response, ai_result.get("was_retried", False))
+        return response
+    
+    results = await asyncio.gather(*[process_one(email) for email in request.emails])
+    
+    return {
+        "count": len(results),
+        "results": results,
+    }
+    
+@app.get("/api/stats")
+async def stats():
+    """Return stats for dashboard"""
+    return get_stats()
+
+@app.get("/api/history")
+async def history(limit: int = 20, offset: int = 0):
+    """Return recent classification history for dashboard"""
+    return get_history(limit, offset)
     
 if __name__ == "__main__":
     import uvicorn
