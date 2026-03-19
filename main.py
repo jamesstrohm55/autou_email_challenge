@@ -128,6 +128,31 @@ async def stats():
 async def history(limit: int = 20, offset: int = 0):
     """Return recent classification history for dashboard"""
     return get_history(limit, offset)
+
+@app.get("/api/health")
+async def health():
+    import httpx
+    
+    #Check if OpenRouter API key exists 
+    api_key = os.getenv("OPENROUTER_API_KEY")
+    if not api_key:
+        return {"status": "error", "message": "OPENROUTER_API_KEY not set in environment."}
+    
+    #check if OpenRouter API is reachable
+    try:
+        async with httpx.AsyncClient() as client:
+            response = await client.get(
+                "https://openrouter.ai/api/v1/models",
+                headers={"Authorization": f"Bearer {api_key}"},
+                timeout=10,
+            )
+        if response.status_code == 200:
+            return {"status": "healthy", "openrouter": "connected"}
+        else:
+            return {"status": "unhealthy", "reason": f"OpenRouter returned {response.status_code}"}
+    except Exception as e:
+        return {"status": "unhealthy", "reason": f"Connection failed: {str(e)}"}
+    
     
 if __name__ == "__main__":
     import uvicorn
