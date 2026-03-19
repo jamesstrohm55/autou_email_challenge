@@ -8,6 +8,7 @@ An email classification app for financial services. Upload or paste an email, an
 - **NLP**: NLTK (stopword removal, lemmatization)
 - **AI**: OpenRouter API (Nvidia Nemotron model)
 - **File Parsing**: pdfplumber for PDFs, UTF-8/Latin-1 for text files
+- **Database**: SQLite for classification history and analytics
 
 ## Setup
 
@@ -34,7 +35,7 @@ Server starts at `http://localhost:8000`.
 
 ### POST /api/classify
 
-Accepts either a file upload or text input via form data.
+Classify a single email via text or file upload.
 
 **Text input:**
 ```bash
@@ -53,7 +54,51 @@ curl -X POST http://localhost:8000/api/classify -F "file=@email.txt"
   "confidence": "High",
   "reasoning": "The email requests an update on a compliance audit...",
   "suggested_reply": "Dear [Sender], Thank you for your request...",
+  "was_retried": false,
   "original_length": 85,
   "preprocessed_length": 63
 }
 ```
+
+### POST /api/classify/batch
+
+Classify up to 20 emails in a single request.
+
+```bash
+curl -X POST http://localhost:8000/api/classify/batch -H "Content-Type: application/json" -d "{\"emails\": [\"Please send the Q4 audit report\", \"FLASH SALE 70% OFF!!!\"]}"
+```
+
+**Response:**
+```json
+{
+  "count": 2,
+  "results": [
+    {"classification": "Productive", "confidence": "High", "...": "..."},
+    {"classification": "Non-Productive", "confidence": "High", "...": "..."}
+  ]
+}
+```
+
+### GET /api/stats
+
+View classification statistics and breakdowns.
+
+```bash
+curl http://localhost:8000/api/stats
+```
+
+### GET /api/history
+
+View recent classifications with optional pagination.
+
+```bash
+curl http://localhost:8000/api/history
+curl "http://localhost:8000/api/history?limit=5&offset=0"
+```
+
+## Features
+
+- **NLP Preprocessing**: Email header removal, text cleaning, stopword removal, lemmatization
+- **Confidence Retry**: Low-confidence classifications are automatically retried with a more detailed prompt
+- **Batch Processing**: Classify up to 20 emails in parallel with a single API call
+- **Analytics**: SQLite-backed classification history with stats dashboard endpoint
