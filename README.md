@@ -133,7 +133,7 @@ The UI includes a live health indicator, toast notifications, loading spinners, 
 
 ## Live Demo
 
-Deployed on Render: **[URL will be added after deploy]**
+Deployed on Render: **https://autou-email-challenge-vdnn.onrender.com/**
 
 ## Deployment
 
