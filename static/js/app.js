@@ -15,6 +15,7 @@ function init() {
     setupBatchForm();
     setupHistoryPagination();
     setupExportCsv();
+    setupModal();
 }
 
 function setupTabs() {
@@ -409,12 +410,12 @@ async function loadHistory() {
             return;
         }
 
-        body.innerHTML = data.map(row => {
+        body.innerHTML = data.map((row, i) => {
             const cls = row.classification === 'Productive' ? 'productive' : 'non-productive';
             const clsBadge = cls === 'productive' ? 'badge-productive' : 'badge-non-productive';
             const confBadge = row.confidence ? 'badge-' + row.confidence.toLowerCase() : '';
             const preview = row.input_text.length > 80 ? row.input_text.slice(0, 80) + '...' : row.input_text;
-            return `<tr>
+            return `<tr class="clickable-row" data-row-index="${i}">
                 <td>${formatTime(row.timestamp)}</td>
                 <td><span class="badge ${clsBadge}">${escapeHtml(row.classification)}</span></td>
                 <td><span class="badge ${confBadge}">${escapeHtml(row.confidence)}</span></td>
@@ -422,6 +423,13 @@ async function loadHistory() {
                 <td>${row.was_retried ? 'Yes' : 'No'}</td>
             </tr>`;
         }).join('');
+
+        body.querySelectorAll('.clickable-row').forEach(tr => {
+            tr.addEventListener('click', () => {
+                const idx = parseInt(tr.dataset.rowIndex);
+                openDetailModal(data[idx]);
+            });
+        });
 
         document.getElementById('prevPage').disabled = historyPage === 0;
         document.getElementById('nextPage').disabled = data.length < PAGE_SIZE;
@@ -559,4 +567,61 @@ function setupExportCsv() {
             showToast('Failed to export history.', 'error');
         }
     });
+}
+
+function setupModal() {
+    const overlay = document.getElementById('modalOverlay');
+    document.getElementById('modalCloseBtn').addEventListener('click', closeModal);
+    overlay.addEventListener('click', e => {
+        if (e.target === overlay) closeModal();
+    });
+    document.addEventListener('keydown', e => {
+        if (e.key === 'Escape' && !overlay.classList.contains('hidden')) closeModal();
+    });
+}
+
+function closeModal() {
+    const overlay = document.getElementById('modalOverlay');
+    overlay.classList.remove('show');
+    setTimeout(() => overlay.classList.add('hidden'), 200);
+}
+
+function openDetailModal(row) {
+    const overlay = document.getElementById('modalOverlay');
+    const body = document.getElementById('modalBody');
+    const cls = row.classification === 'Productive' ? 'productive' : 'non-productive';
+    const clsBadge = cls === 'productive' ? 'badge-productive' : 'badge-non-productive';
+    const confBadge = row.confidence ? 'badge-' + row.confidence.toLowerCase() : '';
+
+    body.innerHTML = `
+        <div class="modal-row">
+            <div class="result-header" style="margin-bottom:0">
+                <span class="badge ${clsBadge}">${escapeHtml(row.classification)}</span>
+                <span class="badge ${confBadge}">${escapeHtml(row.confidence)}</span>
+                ${row.was_retried ? '<span class="badge badge-medium">Retried</span>' : ''}
+            </div>
+        </div>
+        <div class="modal-row">
+            <div class="modal-label">Time</div>
+            <div class="modal-value">${formatTime(row.timestamp)}</div>
+        </div>
+        <div class="modal-row">
+            <div class="modal-label">Email Preview</div>
+            <div class="modal-value modal-value--preview">${escapeHtml(row.input_text)}</div>
+        </div>
+        ${row.reasoning ? `<div class="modal-row">
+            <div class="modal-label">Reasoning</div>
+            <div class="modal-value">${escapeHtml(row.reasoning)}</div>
+        </div>` : ''}
+        ${row.suggested_reply ? `<div class="modal-row">
+            <div class="modal-label">Suggested Reply</div>
+            <div class="suggested-reply">
+                <button class="copy-btn" onclick="copyReply(this)">Copy</button>
+                <div class="result-text reply-text">${escapeHtml(row.suggested_reply)}</div>
+            </div>
+        </div>` : ''}
+    `;
+
+    overlay.classList.remove('hidden');
+    setTimeout(() => overlay.classList.add('show'), 10);
 }
