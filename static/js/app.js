@@ -154,6 +154,7 @@ function renderSingleResult(data) {
             <div class="result-header">
                 <span class="badge ${clsBadge}">${escapeHtml(data.classification)}</span>
                 <span class="badge ${confBadge}">${escapeHtml(data.confidence)} confidence</span>
+                ${data.was_retried ? '<span class="badge badge-medium">Retried</span>' : ''}
             </div>
             <div class="result-section">
                 <div class="result-label">Reasoning</div>
@@ -165,6 +166,10 @@ function renderSingleResult(data) {
                     <button class="copy-btn" data-text="${escapeHtml(data.suggested_reply)}">Copy</button>
                     <div class="result-text reply-text">${escapeHtml(data.suggested_reply)}</div>
                 </div>
+            </div>
+            <div class="result-meta">
+                <span>Original: ${data.original_length} chars</span>
+                <span>Preprocessed: ${data.preprocessed_length} chars</span>
             </div>
         </div>
     `;
