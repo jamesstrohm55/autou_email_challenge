@@ -6,5 +6,4 @@ nltk_data/
 .venv/
 classification.db
 classifications.db
-.gitignore
 .vscode/
