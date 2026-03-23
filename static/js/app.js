@@ -16,6 +16,7 @@ function init() {
     setupHistoryPagination();
     setupExportCsv();
     setupModal();
+    setupThemetoggle();
 }
 
 function setupTabs() {
@@ -624,4 +625,30 @@ function openDetailModal(row) {
 
     overlay.classList.remove('hidden');
     setTimeout(() => overlay.classList.add('show'), 10);
+}
+
+function setupThemetoggle() {
+    const toggle = document.getElementById('themeToggle');
+    const saved = localStorage.getItem('theme');
+    if (saved === 'dark') applyTheme('dark');
+
+    toggle.addEventListener('click', () => {
+        const current = document.documentElement.getAttribute('data-theme');
+        const next = current === 'dark' ? 'light' : 'dark';
+        applyTheme(next);
+        localStorage.setItem('theme', next);
+    });
+}
+
+function applyTheme(theme) {
+    document.documentElement.setAttribute('data-theme', theme);
+    const lightIcon = document.querySelector('.theme-icon--light');
+    const darkIcon = document.querySelector('.theme-icon--dark');
+    if (theme === 'dark') {
+        lightIcon.classList.remove('hidden');
+        darkIcon.classList.add('hidden');
+    } else {
+        lightIcon.classList.add('hidden');
+        darkIcon.classList.remove('hidden');
+    }
 }
