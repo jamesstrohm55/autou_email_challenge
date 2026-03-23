@@ -29,6 +29,7 @@ function setupLangToggle() {
         const next = i18n.getLang() === 'en' ? 'pt-BR' : 'en';
         await i18n.setLang(next);
         btn.textContent = next === 'pt-BR' ? 'PT' : 'EN';
+        checkHealth();
     });
 }
 
