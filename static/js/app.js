@@ -78,11 +78,22 @@ async function checkHealth() {
     }
 }
 
-const EXAMPLE_EMAILS = [
-    "Hi Team,\n\nPlease find attached the Q4 compliance audit report for review. We need sign-off from all department heads by end of week. The key findings are summarized on page 3.\n\nRegards,\nSarah Chen\nCompliance Department",
-    "CONGRATULATIONS!!! You've been selected as our LUCKY WINNER! Claim your $10,000 prize NOW by clicking here! This offer expires in 24 HOURS! Act fast! Forward to 10 friends for BONUS prizes!!!",
-    "Dear Accounts Team,\n\nI wanted to follow up on invoice #4521 for the advisory services rendered in February. Our records show this is still outstanding. Could you please confirm the payment status and expected processing date?\n\nThank you,\nMichael Torres\nFinance Operations"
-];
+const EXAMPLE_EMAILS = {
+    en: [
+        "Hi Team,\n\nPlease find attached the Q4 compliance audit report for review. We need sign-off from all department heads by end of week. The key findings are summarized on page 3.\n\nRegards,\nSarah Chen\nCompliance Department",
+        "CONGRATULATIONS!!! You've been selected as our LUCKY WINNER! Claim your $10,000 prize NOW by clicking here! This offer expires in 24 HOURS! Act fast! Forward to 10 friends for BONUS prizes!!!",
+        "Dear Accounts Team,\n\nI wanted to follow up on invoice #4521 for the advisory services rendered in February. Our records show this is still outstanding. Could you please confirm the payment status and expected processing date?\n\nThank you,\nMichael Torres\nFinance Operations"
+    ],
+    'pt-BR': [
+        "Prezada equipe,\n\nSegue em anexo o relatório de auditoria de conformidade do Q4 para revisão. Precisamos da aprovação de todos os chefes de departamento até o final da semana. Os principais achados estão resumidos na página 3.\n\nAtenciosamente,\nSarah Chen\nDepartamento de Conformidade",
+        "PARABÉNS!!! Você foi selecionado como nosso GRANDE VENCEDOR! Resgate seu prêmio de R$50.000 AGORA clicando aqui! Esta oferta expira em 24 HORAS! Aja rápido! Encaminhe para 10 amigos para PRÊMIOS BÔNUS!!!",
+        "Prezada Equipe Financeira,\n\nGostaria de dar seguimento à nota fiscal #4521 referente aos serviços de consultoria prestados em fevereiro. Nossos registros indicam que este pagamento ainda está pendente. Poderiam confirmar o status do pagamento e a data prevista de processamento?\n\nObrigado,\nMichael Torres\nOperações Financeiras"
+    ]
+};
+
+function getExamples() {
+    return EXAMPLE_EMAILS[i18n.getLang()] || EXAMPLE_EMAILS.en;
+}
 
 function setupClassifyForm() {
     const textarea = document.getElementById('classifyText');
@@ -118,7 +129,8 @@ function setupClassifyForm() {
 
     // Try an example
     document.getElementById('tryExampleBtn').addEventListener('click', () => {
-        const example = EXAMPLE_EMAILS[Math.floor(Math.random() * EXAMPLE_EMAILS.length)];
+        const examples = getExamples();
+        const example = examples[Math.floor(Math.random() * examples.length)];
         textarea.value = example;
         charCount.textContent = i18n.t('classify.charCount', { count: example.length.toLocaleString() });
         textarea.focus();
@@ -138,6 +150,7 @@ async function classifySingle(e) {
         const formData = new FormData();
         if (text) formData.append('text', text);
         if (selectedFile) formData.append('file', selectedFile);
+        formData.append('lang', i18n.getLang());
 
         const res = await fetch('/api/classify', { method: 'POST', body: formData });
         const data = await res.json();
@@ -168,9 +181,9 @@ function renderSingleResult(data) {
     container.innerHTML = `
         <div class="result-card ${cls}">
             <div class="result-header">
-                <span class="badge ${clsBadge}">${escapeHtml(data.classification)}</span>
-                <span class="badge ${confBadge}">${escapeHtml(data.confidence)} confidence</span>
-                ${data.was_retried ? '<span class="badge badge-medium">Retried</span>' : ''}
+                <span class="badge ${clsBadge}">${i18n.t('class.' + data.classification)}</span>
+                <span class="badge ${confBadge}">${i18n.t('confidence.' + data.confidence)} ${i18n.t('confidence.suffix')}</span>
+                ${data.was_retried ? `<span class="badge badge-medium">${i18n.t('result.retried')}</span>` : ''}
             </div>
             <div class="result-section">
                 <div class="result-label">${i18n.t('result.reasoning')}</div>
@@ -179,13 +192,13 @@ function renderSingleResult(data) {
             <div class="result-section">
                 <div class="result-label">${i18n.t('result.suggestedReply')}</div>
                 <div class="suggested-reply">
-                    <button class="copy-btn" data-text="${escapeHtml(data.suggested_reply)}">Copy</button>
+                    <button class="copy-btn" data-text="${escapeHtml(data.suggested_reply)}">${i18n.t('result.copy')}</button>
                     <div class="result-text reply-text">${escapeHtml(data.suggested_reply)}</div>
                 </div>
             </div>
             <div class="result-meta">
-                <span>Original: ${data.original_length} chars</span>
-                <span>Preprocessed: ${data.preprocessed_length} chars</span>
+                <span>${i18n.t('result.original')}: ${data.original_length} ${i18n.t('result.chars')}</span>
+                <span>${i18n.t('result.preprocessed')}: ${data.preprocessed_length} ${i18n.t('result.chars')}</span>
             </div>
         </div>
     `;
@@ -299,7 +312,7 @@ function setupBatchForm() {
 
     document.getElementById('tryBatchExampleBtn').addEventListener('click', () => {
         const delim = delimEl.value || '---';
-        textEl.value = EXAMPLE_EMAILS.join('\n' + delim + '\n');
+        textEl.value = getExamples().join('\n' + delim + '\n');
         updateCount();
         textEl.focus();
     });
@@ -328,7 +341,7 @@ async function classifyBatch(e) {
         const res = await fetch('/api/classify/batch', {
             method: 'POST',
             headers: { 'Content-Type': 'application/json'},
-            body: JSON.stringify({ emails })
+            body: JSON.stringify({ emails, lang: i18n.getLang() })
         });
         const data = await res.json();
 
@@ -355,9 +368,9 @@ function renderBatchResult(data) {
     const nonProductive = data.results.filter(r => r.classification === 'Non-Productive').length;
 
     let html = `<div class="batch-summary">
-        <span>Total: ${data.count}</span>
-        <span style="color: #6ee7b7">Productive: ${productive}</span>
-        <span style="color: #fca5a5">Non-Productive: ${nonProductive}</span>
+        <span>${i18n.t('batch.total')}: ${data.count}</span>
+        <span style="color: #6ee7b7">${i18n.t('batch.productive')}: ${productive}</span>
+        <span style="color: #fca5a5">${i18n.t('batch.nonProductive')}: ${nonProductive}</span>
     </div>`;
 
     data.results.forEach((result, i) => {
@@ -368,9 +381,9 @@ function renderBatchResult(data) {
         html += `
         <div class="result-card ${cls}">
             <div class="result-header">
-                <strong>Email ${i + 1}</strong>
-                <span class="badge ${clsBadge}">${escapeHtml(result.classification)}</span>
-                ${result.confidence ? `<span class="badge ${confBadge}">${escapeHtml(result.confidence)}</span>` : ''}
+                <strong>${i18n.t('batch.email')} ${i + 1}</strong>
+                <span class="badge ${clsBadge}">${i18n.t('class.' + result.classification)}</span>
+                ${result.confidence ? `<span class="badge ${confBadge}">${i18n.t('confidence.' + result.confidence)}</span>` : ''}
             </div>
             <div class="result-section">
                 <div class="result-text">${escapeHtml(result.reasoning)}</div>
@@ -379,7 +392,7 @@ function renderBatchResult(data) {
                 <div class="result-section">
                     <div class="result-label">${i18n.t('result.suggestedReply')}</div>
                     <div class="suggested-reply">
-                        <button class="copy-btn" onclick="copyReply(this)">Copy</button>
+                        <button class="copy-btn" onclick="copyReply(this)">${i18n.t('result.copy')}</button>
                         <div class="result-text reply-text">${escapeHtml(result.suggested_reply)}</div>
                     </div>
                 </div>
@@ -432,8 +445,8 @@ async function loadHistory() {
             const preview = row.input_text.length > 80 ? row.input_text.slice(0, 80) + '...' : row.input_text;
             return `<tr class="clickable-row" data-row-index="${i}">
                 <td>${formatTime(row.timestamp)}</td>
-                <td><span class="badge ${clsBadge}">${escapeHtml(row.classification)}</span></td>
-                <td><span class="badge ${confBadge}">${escapeHtml(row.confidence)}</span></td>
+                <td><span class="badge ${clsBadge}">${i18n.t('class.' + row.classification)}</span></td>
+                <td><span class="badge ${confBadge}">${i18n.t('confidence.' + row.confidence)}</span></td>
                 <td class="preview-text" title="${escapeHtml(row.input_text)}">${escapeHtml(preview)}</td>
                 <td>${row.was_retried ? i18n.t('result.yes') : i18n.t('result.no')}</td>
             </tr>`;
@@ -611,9 +624,9 @@ function openDetailModal(row) {
     body.innerHTML = `
         <div class="modal-row">
             <div class="result-header" style="margin-bottom:0">
-                <span class="badge ${clsBadge}">${escapeHtml(row.classification)}</span>
-                <span class="badge ${confBadge}">${escapeHtml(row.confidence)}</span>
-                ${row.was_retried ? '<span class="badge badge-medium">Retried</span>' : ''}
+                <span class="badge ${clsBadge}">${i18n.t('class.' + row.classification)}</span>
+                <span class="badge ${confBadge}">${i18n.t('confidence.' + row.confidence)}</span>
+                ${row.was_retried ? `<span class="badge badge-medium">${i18n.t('result.retried')}</span>` : ''}
             </div>
         </div>
         <div class="modal-row">

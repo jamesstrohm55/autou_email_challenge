@@ -69,6 +69,7 @@ app.mount("/static", StaticFiles(directory="static"), name="static")  #Serve sta
 
 class BatchRequest(BaseModel):
     emails: list[str]  #List of raw email texts to classify in batch
+    lang: str = "en"   #Language for AI response
 
 @app.get("/")
 async def root():
@@ -81,6 +82,7 @@ async def classify_email(
     request: Request,
     file: UploadFile = File(None),      #Optional file upload
     text: str = Form(None),             #Optional text field
+    lang: str = Form("en"),             #Language for AI response
 ):
     #Validate: at least one input required
     if file is None and text is None:
@@ -103,7 +105,7 @@ async def classify_email(
     result = preprocess_email(raw_text)
     
     #Send to AI for classification
-    ai_result = await classify_and_respond(result["original_clean"], result["preprocessed"])
+    ai_result = await classify_and_respond(result["original_clean"], result["preprocessed"], lang)
     
     #Return AI result plus some metadata about the text lengths for frontend display
     response = {
@@ -128,9 +130,9 @@ async def classify_batch(request: Request, batch: BatchRequest):
         text = email_text.strip()
         if not text:
             return {"classification" : "Error", "reasoning": "Email text cannot be empty."}
-        
+
         result = preprocess_email(text)
-        ai_result = await classify_and_respond(result["original_clean"], result["preprocessed"])
+        ai_result = await classify_and_respond(result["original_clean"], result["preprocessed"], batch.lang)
         
         response = {
             **ai_result,

@@ -52,24 +52,29 @@ class ClassifierError(Exception):
         self.message = message
 
 
-async def classify_and_respond(original_text: str, preprocessed_text: str) -> dict:
+LANG_INSTRUCTIONS = {
+    "pt-BR": '\n\nIMPORTANT: Write the "reasoning" and "suggested_reply" fields in Brazilian Portuguese (PT-BR). The "classification" and "confidence" fields must remain in English.',
+}
+
+async def classify_and_respond(original_text: str, preprocessed_text: str, lang: str = "en") -> dict:
     """Classify an email. If confidence is Low, retry with a more detailed prompt to try to get a better result."""
+    lang_suffix = LANG_INSTRUCTIONS.get(lang, "")
     try:
-        result = await _call_ai(original_text, preprocessed_text, SYSTEM_PROMPT)
+        result = await _call_ai(original_text, preprocessed_text, SYSTEM_PROMPT + lang_suffix)
     except ClassifierError:
         raise
-    
+
     was_retried = False
-    
+
     if result.get("confidence") == "Low" and result.get("classification") not in ("Error", "Unknown"):
         try:
-            retry_result = await _call_ai(original_text, preprocessed_text, DETAILED_PROMPT)
+            retry_result = await _call_ai(original_text, preprocessed_text, DETAILED_PROMPT + lang_suffix)
             if retry_result.get("classification") not in ("Error", "Unknown"):
                 result = retry_result
                 was_retried = True
         except ClassifierError:
             pass # Keep the original low confidence result if the retry also fails
-            
+
     result["was_retried"] = was_retried  #Add this flag to the result for database logging
     return result
 
@@ -88,7 +93,7 @@ async def _call_ai(original_text: str, preprocessed_text: str, system_prompt: st
                 json={
                     "model": "nvidia/nemotron-3-nano-30b-a3b:free",
                     "messages": [
-                        {"role": "system", "content": SYSTEM_PROMPT},
+                        {"role": "system", "content": system_prompt},
                         {"role": "user", "content": f"Original email:\n{original_text}\n\nPreprocessed keywords:\n{preprocessed_text}"}
                     ],
                     "temperature": 0.3,
