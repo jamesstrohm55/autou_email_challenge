@@ -15,69 +15,68 @@
     <header class="header">
         <div class="header-inner">
             <h1 class="logo">
-                AutoU <span class="logo-sub">Email Classifier</span>
+                AutoU <span class="logo-sub" data-i18n="header.subtitle">Email Classifier</span>
             </h1>
             <div class="health-indicator">
                 <span class="health-dot" id="healthDot"></span>
-                <span id="healthText">Checking health...</span>
+                <span id="healthText" data-i18n="header.healthChecking">Checking health...</span>
             </div>
-            <button class="theme-toggle" id="themeToggle" title="Toggle dark mode">
+            <div class="header-actions">
+                <button class="lang-toggle" id="langToggle" title="Switch language">EN</button>
+                <button class="theme-toggle" id="themeToggle" title="Toggle dark mode">
                 <svg class="theme-icon theme-icon--light hidden" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle
             cx="12" cy="12" r="5"/><path d="M12 1v2M12 21v2M4.22 4.22l1.42 1.42M18.36 18.36l1.42 1.42M1 12h2M21 12h2M4.22
             19.78l1.42-1.42M18.36 5.64l1.42-1.42"/></svg>
                 <svg class="theme-icon theme-icon--dark" viewBox="0 0 24 24" fill="none" stroke="currentColor"
                 stroke-width="2"><path d="M21 12.79A9 9 0 1 1 11.21 3 7 7 0 0 0 21 12.79z"/></svg>
             </button>
+            </div>
         </div>
     </header>
 
     <nav class="tab-bar">
         <div class="tab-bar-inner">
-            <button class="tab-btn active" data-tab="classify">Classify</button>
-            <button class="tab-btn" data-tab="batch">Batch</button>
-            <button class="tab-btn" data-tab="history">History</button>
-            <button class="tab-btn" data-tab="dashboard">Dashboard</button>
+            <button class="tab-btn active" data-tab="classify" data-i18n="tabs.classify">Classify</button>
+            <button class="tab-btn" data-tab="batch" data-i18n="tabs.batch">Batch</button>
+            <button class="tab-btn" data-tab="history" data-i18n="tabs.history">History</button>
+            <button class="tab-btn" data-tab="dashboard" data-i18n="tabs.dashboard">Dashboard</button>
         </div>
     </nav>
 
     <main class="container">
         <section class="tab-content active" id="tab-classify">
             <div class="card">
-                <h2 class="card-title">Classify an Email</h2>
+                <h2 class="card-title" data-i18n="classify.title">Classify an Email</h2>
                 <form id="classifyForm" autocomplete="off">
                     <div class="textarea-wrap">
                         <textarea id="classifyText" class="textarea" rows="8"
-                            placeholder="Paste email text here..."></textarea>
+                            data-i18n-placeholder="classify.placeholder" placeholder="Paste email text here..."></textarea>
                         <div class="textarea-footer">
                             <span class="char-count" id="classifyCharCount">0 characters</span>
-                            <span class="kbd-hint">Ctrl+Enter to classify</span>
+                            <span class="kbd-hint" data-i18n="classify.kbdHint">Ctrl+Enter to classify</span>
                         </div>
                     </div>
                     <div class="form-actions">
                         <button type="submit" class="btn btn-primary" id="classifyBtn">
-                            <span class="btn-text">Classify Email</span>
+                            <span class="btn-text" data-i18n="classify.btnSubmit">Classify Email</span>
                             <span class="spinner hidden"></span>
                         </button>
-                        <button type="button" class="btn btn-secondary" id="classifyClearBtn">
+                        <button type="button" class="btn btn-secondary" id="classifyClearBtn" data-i18n="classify.btnClear">
                             Clear
                         </button>
-                        <button type="button" class="btn btn-ghost" id="tryExampleBtn">
+                        <button type="button" class="btn btn-ghost" id="tryExampleBtn" data-i18n="classify.btnExample">
                             Try an example
                         </button>
                     </div>
                 </form>
-                <div class="divider"><span>or upload a file</span></div>
+                <div class="divider"><span data-i18n="classify.divider">or upload a file</span></div>
 
                 <div class="drop-zone" id="dropZone">
                     <div class="drop-zone-content" id="dropZoneContent">
                         <svg class="drop-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="17 8 12 3 7 8"/><line x1="12" y1="3" x2="12" y2="15"/></svg>
-                        <p>
-                            Drag and drop a <strong>.txt</strong> or
-                            <strong>.pdf</strong> file here
-                        </p>
+                        <p data-i18n="classify.dropText">Drag and drop a .txt or .pdf file here</p>
                         <p class="drop-hint">
-                            or
-                            <label for="fileInput" class="file-label">browse files</label>
+                            <label for="fileInput" class="file-label" data-i18n="classify.browseFiles">browse files</label>
                         </p>
                         <input type="file" id="fileInput" accept=".txt,.pdf" hidden />
                     </div>
@@ -99,26 +98,26 @@
 
         <section class="tab-content hidden" id="tab-batch">
             <div class="card">
-                <h2 class="card-title">Batch Classification</h2>
+                <h2 class="card-title" data-i18n="batch.title">Batch Classification</h2>
                 <form id="batchForm" autocomplete="off">
                     <textarea id="batchText" class="textarea" rows="12"
-                        placeholder="Paste multiple emails separated by the delimiter below..."></textarea>
+                        data-i18n-placeholder="batch.placeholder" placeholder="Paste multiple emails separated by the delimiter below..."></textarea>
                     <div class="batch-options">
                         <label class="field-label">
-                            Delimiter
+                            <span data-i18n="batch.delimiter">Delimiter</span>
                             <input type="text" id="batchDelimiter" class="input-small" value="---" />
                         </label>
                         <span class="email-count" id="emailCount">0 emails detected</span>
                     </div>
                     <div class="form-actions">
                         <button type="submit" class="btn btn-primary" id="batchBtn">
-                            <span class="btn-text">Classify All</span>
+                            <span class="btn-text" data-i18n="batch.btnSubmit">Classify All</span>
                             <span class="spinner hidden"></span>
                         </button>
-                        <button type="button" class="btn btn-secondary" id="batchClearBtn">
+                        <button type="button" class="btn btn-secondary" id="batchClearBtn" data-i18n="batch.btnClear">
                             Clear
                         </button>
-                        <button type="button" class="btn btn-ghost" id="tryBatchExampleBtn">
+                        <button type="button" class="btn btn-ghost" id="tryBatchExampleBtn" data-i18n="batch.btnExample">
                             Try an example
                         </button>
                     </div>
@@ -131,21 +130,21 @@
         <section class="tab-content hidden" id="tab-history">
             <div class="card">
                 <div class="card-header">
-                    <h2 class="card-title" style="margin-bottom:0">Classification History</h2>
+                    <h2 class="card-title" style="margin-bottom:0" data-i18n="history.title">Classification History</h2>
                     <button class="btn btn-sm btn-ghost" id="exportCsvBtn" title="Export to CSV">
                         <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="7 10 12 15 17 10"/><line x1="12" y1="15" x2="12" y2="3"/></svg>
-                        Export CSV
+                        <span data-i18n="history.exportCsv">Export CSV</span>
                     </button>
                 </div>
                 <div class="table-wrap">
                     <table class="table" id="historyTable">
                         <thead>
                             <tr>
-                                <th>Time</th>
-                                <th>Classification</th>
-                                <th>Confidence</th>
-                                <th>Preview</th>
-                                <th>Retried</th>
+                                <th data-i18n="history.thTime">Time</th>
+                                <th data-i18n="history.thClassification">Classification</th>
+                                <th data-i18n="history.thConfidence">Confidence</th>
+                                <th data-i18n="history.thPreview">Preview</th>
+                                <th data-i18n="history.thRetried">Retried</th>
                             </tr>
                         </thead>
                         <tbody id="historyBody">
@@ -165,25 +164,25 @@
             <div class="stats-grid">
                 <div class="stat-card stat-card--primary">
                     <div class="stat-value" id="statTotal">&mdash;</div>
-                    <div class="stat-label">Total Classified</div>
+                    <div class="stat-label" data-i18n="dashboard.totalClassified">Total Classified</div>
                 </div>
                 <div class="stat-card stat-card--productive">
                     <div class="stat-value" id="statProductive">&mdash;</div>
-                    <div class="stat-label">Productive %</div>
+                    <div class="stat-label" data-i18n="dashboard.productivePct">Productive %</div>
                 </div>
                 <div class="stat-card stat-card--amber">
                     <div class="stat-value" id="statRetried">&mdash;</div>
-                    <div class="stat-label">Retried</div>
+                    <div class="stat-label" data-i18n="dashboard.retried">Retried</div>
                 </div>
             </div>
 
             <div class="charts-grid">
                 <div class="card">
-                    <h3 class="card-title">By Classification</h3>
+                    <h3 class="card-title" data-i18n="dashboard.byClassification">By Classification</h3>
                     <div class="bar-chart" id="classificationChart"></div>
                 </div>
                 <div class="card">
-                    <h3 class="card-title">By Confidence</h3>
+                    <h3 class="card-title" data-i18n="dashboard.byConfidence">By Confidence</h3>
                     <div class="bar-chart" id="confidenceChart"></div>
                 </div>
             </div>
@@ -193,7 +192,7 @@
     <div class="modal-overlay hidden" id="modalOverlay">
         <div class="modal">
             <div class="modal-header">
-                <h3 class="modal-title">Classification Details</h3>
+                <h3 class="modal-title" data-i18n="modal.title">Classification Details</h3>
                 <button class="btn-icon" id="modalCloseBtn">&times;</button>  
             </div>
             <div class="modal-body" id="modalBody"></div>
@@ -202,13 +201,14 @@
 
 <footer class="footer">
     <div class="footer-inner">
-        <span>Built for the <strong>AutoU</strong>Coding Challenge</span>
+        <span data-i18n-html="footer.line1">Built for the <strong>AutoU</strong> Coding Challenge</span>
         <span class="footer-sep">|</span>
-        <span>FastAPI + NLTK + OpenRouter AI</span>
+        <span data-i18n="footer.line2">FastAPI + NLTK + OpenRouter AI</span>
     </div>
 </footer>
 
     <div class="toast-container" id="toastContainer" aria-live="polite" role="status"></div>
+    <script src="/static/js/i18n.js"></script>
     <script src="/static/js/app.js"></script>
 </body>
 

@@ -6,7 +6,8 @@ let dashboardLoaded = false;
 
 document.addEventListener('DOMContentLoaded', init);
 
-function init() {
+async function init() {
+    await i18n.init();
     setupTabs();
     setupClassifyForm();
     checkHealth();
@@ -17,6 +18,18 @@ function init() {
     setupExportCsv();
     setupModal();
     setupThemetoggle();
+    setupLangToggle();
+}
+
+function setupLangToggle() {
+    const btn = document.getElementById('langToggle');
+    btn.textContent = i18n.getLang() === 'pt-BR' ? 'PT' : 'EN';
+
+    btn.addEventListener('click', async () => {
+        const next = i18n.getLang() === 'en' ? 'pt-BR' : 'en';
+        await i18n.setLang(next);
+        btn.textContent = next === 'pt-BR' ? 'PT' : 'EN';
+    });
 }
 
 function setupTabs() {
@@ -53,14 +66,14 @@ async function checkHealth() {
         const data = await res.json();
         if (data.status === 'healthy') {
             dot.className = 'health-dot healthy';
-            text.textContent = 'API Connected';
+            text.textContent = i18n.t('header.healthConnected');
         } else {
             dot.className = 'health-dot unhealthy';
-            text.textContent = 'API Unhealthy';
+            text.textContent = i18n.t('header.healthUnhealthy');
         }
     } catch {
         dot.className = 'health-dot unhealthy';
-        text.textContent = 'API Unreachable';
+        text.textContent = i18n.t('header.healthUnreachable');
     }
 }
 
@@ -79,7 +92,7 @@ function setupClassifyForm() {
     // Character count
     textarea.addEventListener('input', () => {
         const len = textarea.value.length;
-        charCount.textContent = len.toLocaleString() + ' character' + (len !== 1 ? 's' : '');
+        charCount.textContent = i18n.t('classify.charCount', { count: len.toLocaleString() });
     });
 
     // Ctrl+Enter to submit
@@ -93,7 +106,7 @@ function setupClassifyForm() {
     // Clear
     document.getElementById('classifyClearBtn').addEventListener('click', () => {
         textarea.value = '';
-        charCount.textContent = '0 characters';
+        charCount.textContent = i18n.t('classify.charCount', { count: '0' });
         document.getElementById('singleResult').classList.add('hidden');
         selectedFile = null;
         const input = document.getElementById('fileInput');
@@ -106,7 +119,7 @@ function setupClassifyForm() {
     document.getElementById('tryExampleBtn').addEventListener('click', () => {
         const example = EXAMPLE_EMAILS[Math.floor(Math.random() * EXAMPLE_EMAILS.length)];
         textarea.value = example;
-        charCount.textContent = example.length.toLocaleString() + ' characters';
+        charCount.textContent = i18n.t('classify.charCount', { count: example.length.toLocaleString() });
         textarea.focus();
     });
 }
@@ -115,7 +128,7 @@ async function classifySingle(e) {
     e.preventDefault();
     const text = document.getElementById('classifyText').value.trim();
     if (!text && !selectedFile) {
-        showToast('Please enter email text or select a file to classify', 'error');
+        showToast(i18n.t('toast.inputRequired'), 'error');
         return;
     }
 
@@ -134,12 +147,12 @@ async function classifySingle(e) {
         }
 
         renderSingleResult(data);
-        showToast('Classification successful', 'success');
+        showToast(i18n.t('toast.classifySuccess'), 'success');
         setTimeout(() => {
             document.getElementById('singleResult').scrollIntoView({ behavior: 'smooth', block: 'nearest' });
         }, 100);
     } catch {
-        showToast('Network error occurred. Is the server running?', 'error');
+        showToast(i18n.t('toast.networkError'), 'error');
     } finally {
         setLoading('classifyBtn', false);
     }
@@ -159,11 +172,11 @@ function renderSingleResult(data) {
                 ${data.was_retried ? '<span class="badge badge-medium">Retried</span>' : ''}
             </div>
             <div class="result-section">
-                <div class="result-label">Reasoning</div>
+                <div class="result-label">${i18n.t('result.reasoning')}</div>
                 <div class="result-text">${escapeHtml(data.reasoning)}</div>
             </div>
             <div class="result-section">
-                <div class="result-label">Suggested Response</div>
+                <div class="result-label">${i18n.t('result.suggestedReply')}</div>
                 <div class="suggested-reply">
                     <button class="copy-btn" data-text="${escapeHtml(data.suggested_reply)}">Copy</button>
                     <div class="result-text reply-text">${escapeHtml(data.suggested_reply)}</div>
@@ -181,9 +194,9 @@ function renderSingleResult(data) {
 function copyReply(btn) {
     const text = btn.parentElement.querySelector('.reply-text').textContent;
     navigator.clipboard.writeText(text).then(() => {
-        btn.textContent = 'Copied!';
-        setTimeout(() => btn.textContent = 'Copy', 2000);
-        showToast('Suggested reply copied to clipboard', 'success');
+        btn.textContent = i18n.t('result.copied');
+        setTimeout(() => btn.textContent = i18n.t('result.copy'), 2000);
+        showToast(i18n.t('toast.copiedReply'), 'success');
     });
 }
 
@@ -242,11 +255,11 @@ function setupDropZone() {
 function handleFile(file) {
     const ext = file.name.split('.').pop().toLowerCase();
     if (!['txt', 'pdf'].includes(ext)) {
-        showToast('Only .txt and .pdf files are supported', 'error');
+        showToast(i18n.t('toast.fileUnsupported'), 'error');
         return;
     }
     if (file.size > 5 * 1024 * 1024) {
-        showToast('File size must be under 5MB', 'error');
+        showToast(i18n.t('toast.fileTooLarge'), 'error');
         return;
     }
 
@@ -270,7 +283,7 @@ function setupBatchForm() {
 
     function updateCount() {
         const count = splitBatch().length;
-        countEl.textContent = count + ' email' + (count !== 1 ? 's' : '') + ' detected';
+        countEl.textContent = i18n.t('batch.emailCount', { count });
     }
 
     textEl.addEventListener('input', updateCount);
@@ -301,11 +314,11 @@ async function classifyBatch(e) {
     e.preventDefault();
     const emails = splitBatch();
     if (emails.length === 0) {
-        showToast('No emails to classify.', 'error');
+        showToast(i18n.t('toast.noEmails'), 'error');
         return;
     }
     if (emails.length > 20) {
-        showToast('Maximum 20 emails per batch.', 'error');
+        showToast(i18n.t('toast.maxBatch'), 'error');
         return;
     }
 
@@ -324,12 +337,12 @@ async function classifyBatch(e) {
         }
 
         renderBatchResult(data);
-        showToast(`Classified ${data.count} emails.`, 'success');
+        showToast(i18n.t('toast.batchSuccess', { count: data.count }), 'success');
         setTimeout(() => {
             document.getElementById('batchResults').scrollIntoView({ behavior: 'smooth', block: 'nearest' });
         }, 100);
     } catch {
-        showToast('Network error occurred. Is the server running?', 'error');
+        showToast(i18n.t('toast.networkError'), 'error');
     } finally {
         setLoading('batchBtn', false);
     }
@@ -363,7 +376,7 @@ function renderBatchResult(data) {
             </div>
             ${result.suggested_reply ? `
                 <div class="result-section">
-                    <div class="result-label">Suggested Response</div>
+                    <div class="result-label">${i18n.t('result.suggestedReply')}</div>
                     <div class="suggested-reply">
                         <button class="copy-btn" onclick="copyReply(this)">Copy</button>
                         <div class="result-text reply-text">${escapeHtml(result.suggested_reply)}</div>
@@ -401,8 +414,8 @@ async function loadHistory() {
             body.innerHTML = `<tr><td colspan="5" class="table-empty">
                 <div class="empty-state">
                     <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5"><path d="M9 12h6m-6 4h6m2 5H7a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h5.586a1 1 0 0 1 .707.293l5.414 5.414a1 1 0 0 1 .293.707V19a2 2 0 0 1-2 2z"/></svg>
-                    <p>No classifications yet. Classify an email to see it here.</p>
-                    <button class="btn btn-primary btn-sm" onclick="switchTab('classify')">Classify an Email</button>
+                    <p>${i18n.t('history.empty')}</p>
+                    <button class="btn btn-primary btn-sm" onclick="switchTab('classify')">${i18n.t('history.emptyCta')}</button>
                 </div>
             </td></tr>`;
             document.getElementById('prevPage').disabled = true;
@@ -421,7 +434,7 @@ async function loadHistory() {
                 <td><span class="badge ${clsBadge}">${escapeHtml(row.classification)}</span></td>
                 <td><span class="badge ${confBadge}">${escapeHtml(row.confidence)}</span></td>
                 <td class="preview-text" title="${escapeHtml(row.input_text)}">${escapeHtml(preview)}</td>
-                <td>${row.was_retried ? 'Yes' : 'No'}</td>
+                <td>${row.was_retried ? i18n.t('result.yes') : i18n.t('result.no')}</td>
             </tr>`;
         }).join('');
 
@@ -473,8 +486,8 @@ async function loadStats() {
             document.getElementById('statTotal').textContent = '0';
             document.getElementById('statProductive').textContent = '—';
             document.getElementById('statRetried').textContent = '0';
-            document.getElementById('classificationChart').innerHTML = '<p style="color:var(--text-muted);font-size:0.85rem">No data yet.</p>';
-            document.getElementById('confidenceChart').innerHTML = '<p style="color:var(--text-muted);font-size:0.85rem">No data yet.</p>';
+            document.getElementById('classificationChart').innerHTML = `<p style="color:var(--text-muted);font-size:0.85rem">${i18n.t('dashboard.noData')}</p>`;
+            document.getElementById('confidenceChart').innerHTML = `<p style="color:var(--text-muted);font-size:0.85rem">${i18n.t('dashboard.noData')}</p>`;
             dashboardLoaded = true;
             return;
         }
@@ -487,7 +500,7 @@ async function loadStats() {
         renderBarChart('confidenceChart', data.by_confidence, data.total);
         dashboardLoaded = true;
     } catch {
-        showToast('Failed to load dashboard stats.', 'error');
+        showToast(i18n.t('toast.statsFailed'), 'error');
     }
 }
 
@@ -540,7 +553,7 @@ function setupExportCsv() {
             const res = await fetch('/api/history?limit=1000&offset=0');
             const data = await res.json();
             if (data.length === 0) {
-                showToast('No data to export.', 'error');
+                showToast(i18n.t('toast.exportEmpty'), 'error');
                 return;
             }
 
@@ -563,9 +576,9 @@ function setupExportCsv() {
             a.download = 'classification-history.csv';
             a.click();
             URL.revokeObjectURL(url);
-            showToast('History exported to CSV.', 'success');
+            showToast(i18n.t('toast.exportSuccess'), 'success');
         } catch {
-            showToast('Failed to export history.', 'error');
+            showToast(i18n.t('toast.exportFailed'), 'error');
         }
     });
 }
@@ -603,21 +616,21 @@ function openDetailModal(row) {
             </div>
         </div>
         <div class="modal-row">
-            <div class="modal-label">Time</div>
+            <div class="modal-label">${i18n.t('modal.time')}</div>
             <div class="modal-value">${formatTime(row.timestamp)}</div>
         </div>
         <div class="modal-row">
-            <div class="modal-label">Email Preview</div>
+            <div class="modal-label">${i18n.t('modal.emailPreview')}</div>
             <div class="modal-value modal-value--preview">${escapeHtml(row.input_text)}</div>
         </div>
         ${row.reasoning ? `<div class="modal-row">
-            <div class="modal-label">Reasoning</div>
+            <div class="modal-label">${i18n.t('result.reasoning')}</div>
             <div class="modal-value">${escapeHtml(row.reasoning)}</div>
         </div>` : ''}
         ${row.suggested_reply ? `<div class="modal-row">
-            <div class="modal-label">Suggested Reply</div>
+            <div class="modal-label">${i18n.t('result.suggestedReply')}</div>
             <div class="suggested-reply">
-                <button class="copy-btn" onclick="copyReply(this)">Copy</button>
+                <button class="copy-btn" onclick="copyReply(this)">${i18n.t('result.copy')}</button>
                 <div class="result-text reply-text">${escapeHtml(row.suggested_reply)}</div>
             </div>
         </div>` : ''}

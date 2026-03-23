@@ -219,9 +219,34 @@ body {
 .health-indicator {
   display: flex;
   align-items: center;
-  gap: 12px;
+  gap: 8px;
   font-size: 0.8rem;
   color: #94a3b8;
+}
+
+.header-actions {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.lang-toggle {
+  background: none;
+  border: 1px solid #334155;
+  border-radius: 6px;
+  padding: 4px 10px;
+  cursor: pointer;
+  color: #94a3b8;
+  font-family: inherit;
+  font-size: 0.75rem;
+  font-weight: 600;
+  letter-spacing: 0.04em;
+  transition: color var(--transition), border-color var(--transition);
+}
+
+.lang-toggle:hover {
+  color: #e2e8f0;
+  border-color: #64748b;
 }
 .health-dot {
   width: 10px;
